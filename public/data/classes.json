@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "namaKelas": "Kelas 1A",
+    "guruKelas": "Budi Santoso",
+    "lamaKelas": "1 Agustus 2025 - 10 November 2025",
+    "jumlahMurid": 10,
+    "daftarMurid": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    "silabus": {
+      "nama": "Draft SK Bupati PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf",
+      "path": "/assets/Draft SK BupatI PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf"
+    },
+    "kurikulum": {
+      "nama": "Draft SK Bupati PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf",
+      "path": "/assets/Draft SK BupatI PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf"
+    }
+  },
+  {
+    "id": 2,
+    "namaKelas": "Kelas 2B",
+    "guruKelas": "Siti Aminah",
+    "lamaKelas": "5 Agustus 2025 - 15 November 2025",
+    "jumlahMurid": 10,
+    "daftarMurid": [11, 12, 13, 14, 15, 16, 17, 18, 19, 20],
+    "silabus": {
+      "nama": "Draft SK Bupati PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf",
+      "path": "/assets/Draft SK BupatI PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf"
+    },
+    "kurikulum": {
+      "nama": "Draft SK Bupati PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf",
+      "path": "/assets/Draft SK BupatI PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf"
+    }
+  },
+  {
+    "id": 3,
+    "namaKelas": "Kelas 3C",
+    "guruKelas": "Rina Marlina",
+    "lamaKelas": "10 Agustus 2025 - 20 November 2025",
+    "jumlahMurid": 10,
+    "daftarMurid": [21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+    "silabus": {
+      "nama": "Draft SK Bupati PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf",
+      "path": "/assets/Draft SK BupatI PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf"
+    },
+    "kurikulum": {
+      "nama": "Draft SK Bupati PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf",
+      "path": "/assets/Draft SK BupatI PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf"
+    }
+  },
+  {
+    "id": 4,
+    "namaKelas": "Kelas 4D",
+    "guruKelas": "Agus Prabowo",
+    "lamaKelas": "15 Agustus 2025 - 25 November 2025",
+    "jumlahMurid": 10,
+    "daftarMurid": [31, 32, 33, 34, 35, 36, 37, 38, 39, 40],
+    "silabus": {
+      "nama": "Draft SK Bupati PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf",
+      "path": "/assets/Draft SK BupatI PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf"
+    },
+    "kurikulum": {
+      "nama": "Draft SK Bupati PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf",
+      "path": "/assets/Draft SK BupatI PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf"
+    }
+  },
+  {
+    "id": 5,
+    "namaKelas": "Kelas 5E",
+    "guruKelas": "Dewi Lestari",
+    "lamaKelas": "20 Agustus 2025 - 30 November 2025",
+    "jumlahMurid": 10,
+    "daftarMurid": [41, 42, 43, 44, 45, 46, 47, 48, 49, 50],
+    "silabus": {
+      "nama": "Draft SK Bupati PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf",
+      "path": "/assets/Draft SK BupatI PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf"
+    },
+    "kurikulum": {
+      "nama": "Draft SK Bupati PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf",
+      "path": "/assets/Draft SK BupatI PENETAPAN BUNDA PAUD TAHUN 2025 - 2029.pdf"
+    }
+  }
+]

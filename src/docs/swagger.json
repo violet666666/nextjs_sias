@@ -1,0 +1,92 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Sistem Akademik API",
+    "version": "1.0.0",
+    "description": "Dokumentasi API utama untuk sistem akademik."
+  },
+  "paths": {
+    "/api/users": { "get": { "summary": "List users", "responses": { "200": { "description": "OK" } } } },
+    "/api/auth/login": {
+      "post": {
+        "summary": "Login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "example": "user@email.com" },
+                  "password": { "type": "string", "example": "Password123!" }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "Login successful",
+                  "user": { "id": "...", "nama": "User", "email": "user@email.com", "role": "siswa" },
+                  "token": "..."
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad Request" },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "Register user",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "nama": { "type": "string", "example": "Nama User" },
+                  "email": { "type": "string", "example": "user@email.com" },
+                  "password": { "type": "string", "example": "Password123!" },
+                  "role": { "type": "string", "example": "siswa" }
+                },
+                "required": ["nama", "email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "User created",
+                  "user": { "id": "...", "nama": "Nama User", "email": "user@email.com", "role": "siswa" }
+                }
+              }
+            }
+          },
+          "400": { "description": "Bad Request" },
+          "409": { "description": "User already exists" }
+        }
+      }
+    },
+    "/api/kelas": { "get": { "summary": "List kelas", "responses": { "200": { "description": "OK" } } } },
+    "/api/tugas": { "get": { "summary": "List tugas", "responses": { "200": { "description": "OK" } } } },
+    "/api/kehadiran": { "get": { "summary": "List kehadiran", "responses": { "200": { "description": "OK" } } } },
+    "/api/backup": { "get": { "summary": "List backups", "responses": { "200": { "description": "OK" } } } },
+    "/api/analytics/overview": { "get": { "summary": "Analytics overview", "responses": { "200": { "description": "OK" } } } },
+    "/api/notifications": { "get": { "summary": "List notifications", "responses": { "200": { "description": "OK" } } } },
+    "/api/audit-logs": { "get": { "summary": "List audit logs", "responses": { "200": { "description": "OK" } } } },
+    "/api/health": { "get": { "summary": "Health check", "responses": { "200": { "description": "OK" } } } }
+  }
+} 

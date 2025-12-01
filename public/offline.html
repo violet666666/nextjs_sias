@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ceria - Offline</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .offline-container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 400px;
+        }
+
+        .offline-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            line-height: 1.6;
+        }
+
+        .retry-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 8px;
+        }
+
+        .retry-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .offline-features {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            text-align: left;
+        }
+
+        .offline-features h3 {
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .offline-features ul {
+            list-style: none;
+        }
+
+        .offline-features li {
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .offline-features li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4ade80;
+            font-weight: bold;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 8px 16px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 20px;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .connection-status.show {
+            opacity: 1;
+        }
+
+        @media (max-width: 480px) {
+            .offline-container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            p {
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">
+        Checking connection...
+    </div>
+
+    <div class="offline-container">
+        <div class="offline-icon">
+            📡
+        </div>
+        
+        <h1>You're Offline</h1>
+        
+        <p>
+            Don't worry! You can still access some features while you're offline. 
+            We'll sync your data when you're back online.
+        </p>
+
+        <div>
+            <button class="retry-button" onclick="checkConnection()">
+                Try Again
+            </button>
+            <button class="retry-button" onclick="goHome()">
+                Go Home
+            </button>
+        </div>
+
+        <div class="offline-features">
+            <h3>Available Offline:</h3>
+            <ul>
+                <li>View cached pages</li>
+                <li>Access saved files</li>
+                <li>Read previous messages</li>
+                <li>View class materials</li>
+                <li>Check your schedule</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        let connectionCheckInterval;
+
+        // Check connection status
+        function checkConnection() {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = 'Checking connection...';
+            statusEl.classList.add('show');
+
+            fetch('/api/health', { 
+                method: 'HEAD',
+                cache: 'no-cache'
+            })
+            .then(() => {
+                statusEl.textContent = 'Connected! Redirecting...';
+                statusEl.style.background = 'rgba(34, 197, 94, 0.8)';
+                
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            })
+            .catch(() => {
+                statusEl.textContent = 'Still offline';
+                statusEl.style.background = 'rgba(239, 68, 68, 0.8)';
+                
+                setTimeout(() => {
+                    statusEl.classList.remove('show');
+                }, 3000);
+            });
+        }
+
+        // Go to home page
+        function goHome() {
+            window.location.href = '/cpanel/dashboard';
+        }
+
+        // Listen for online/offline events
+        window.addEventListener('online', () => {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = 'Back online!';
+            statusEl.style.background = 'rgba(34, 197, 94, 0.8)';
+            statusEl.classList.add('show');
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        });
+
+        window.addEventListener('offline', () => {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = 'Connection lost';
+            statusEl.style.background = 'rgba(239, 68, 68, 0.8)';
+            statusEl.classList.add('show');
+        });
+
+        // Periodic connection check
+        function startConnectionCheck() {
+            connectionCheckInterval = setInterval(() => {
+                if (navigator.onLine) {
+                    checkConnection();
+                }
+            }, 10000); // Check every 10 seconds
+        }
+
+        // Start connection monitoring
+        startConnectionCheck();
+
+        // Clean up on page unload
+        window.addEventListener('beforeunload', () => {
+            if (connectionCheckInterval) {
+                clearInterval(connectionCheckInterval);
+            }
+        });
+
+        // Show initial status
+        if (navigator.onLine) {
+            checkConnection();
+        } else {
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.textContent = 'Offline';
+            statusEl.style.background = 'rgba(239, 68, 68, 0.8)';
+            statusEl.classList.add('show');
+        }
+    </script>
+</body>
+</html> 

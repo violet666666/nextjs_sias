@@ -1,0 +1,361 @@
+"use client";
+import { useState, useEffect } from "react";
+import { fetchWithAuth } from "@/lib/fetchWithAuth";
+import LoadingSpinner from "@/components/common/LoadingSpinner";
+import BarChart from '@/components/common/BarChart';
+
+function KehadiranAnakTable({ siswaId }) {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!siswaId) { setLoading(false); setData([]); return; }
+    setLoading(true);
+    fetchWithAuth(`/api/kehadiran?siswa_id=${siswaId}`)
+      .then(res => res.ok ? res.json() : Promise.reject("Gagal ambil kehadiran anak"))
+      .then(all => setData(Array.isArray(all) ? all : []))
+      .catch(() => setData([]))
+      .finally(() => setLoading(false));
+  }, [siswaId]);
+
+  if (loading) return <p>Memuat kehadiran anak...</p>;
+  if (!data.length) return <p>Tidak ada data kehadiran anak.</p>;
+  return (
+    <table className="min-w-full bg-white rounded shadow mb-4 text-sm">
+      <thead><tr><th className="py-1 px-2 border-b">Kelas</th><th className="py-1 px-2 border-b">Tanggal</th><th className="py-1 px-2 border-b">Status</th></tr></thead>
+      <tbody>{data.map(d => (<tr key={d._id}><td className="py-1 px-2 border-b">{d.kelas_id?.nama_kelas || '-'}</td><td className="py-1 px-2 border-b">{new Date(d.tanggal).toLocaleDateString()}</td><td className="py-1 px-2 border-b">{d.status}</td></tr>))}</tbody>
+    </table>
+  );
+}
+
+function NilaiAnakTable({ siswaId }) {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    if (!siswaId) { setLoading(false); setData([]); return; }
+    setLoading(true);
+    fetchWithAuth(`/api/submissions?siswa_id=${siswaId}`)
+      .then(res => res.ok ? res.json() : Promise.reject("Gagal ambil nilai anak"))
+      .then(all => setData(Array.isArray(all) ? all : []))
+      .catch(() => setData([]))
+      .finally(() => setLoading(false));
+  }, [siswaId]);
+
+  if (loading) return <p>Memuat nilai anak...</p>;
+  if (!data.length) return <p>Tidak ada data nilai anak.</p>;
+  return (
+    <table className="min-w-full bg-white rounded shadow mb-4 text-sm">
+      <thead><tr><th className="py-1 px-2 border-b">Tugas</th><th className="py-1 px-2 border-b">Nilai</th><th className="py-1 px-2 border-b">Feedback</th></tr></thead>
+      <tbody>{data.map(d => (<tr key={d._id}><td className="py-1 px-2 border-b">{d.tugas_id?.judul || '-'}</td><td className="py-1 px-2 border-b">{d.nilai ?? '-'}</td><td className="py-1 px-2 border-b">{d.feedback || '-'}</td></tr>))}</tbody>
+    </table>
+  );
+}
+
+function NilaiAnakChart({ siswaId }) {
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    if (!siswaId) { setData([]); return; }
+    fetchWithAuth(`/api/submissions?siswa_id=${siswaId}`)
+      .then(res => res.ok ? res.json() : [])
+      .then(all => {
+        setData(Array.isArray(all) ? all.map(d => ({ name: d.tugas_id?.judul || '-', value: typeof d.nilai === 'number' ? d.nilai : 0 })) : []);
+      })
+      .catch(() => setData([]));
+  }, [siswaId]);
+  if (!data.length) return <p>Tidak ada data nilai anak.</p>;
+  return <BarChart data={data} title="Grafik Nilai Anak" color="#3B82F6" />;
+}
+
+function KehadiranAnakChart({ siswaId }) {
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    if (!siswaId) { setData([]); return; }
+    fetchWithAuth(`/api/kehadiran?siswa_id=${siswaId}`)
+      .then(res => res.ok ? res.json() : [])
+      .then(all => {
+        // Hitung jumlah hadir, izin, sakit, alfa
+        const stat = { Hadir: 0, Izin: 0, Sakit: 0, Alfa: 0 };
+        (Array.isArray(all) ? all : []).forEach(a => { if (stat[a.status] !== undefined) stat[a.status]++; });
+        setData(Object.entries(stat).map(([name, value]) => ({ name, value })));
+      })
+      .catch(() => setData([]));
+  }, [siswaId]);
+  if (!data.length) return <p>Tidak ada data kehadiran anak.</p>;
+  return <BarChart data={data} title="Grafik Kehadiran Anak" color="#10B981" />;
+}
+
+export default function OrangtuaDashboardView({ user }) {
+  const [anakList, setAnakList] = useState([]);
+  const [selectedAnak, setSelectedAnak] = useState(null);
+  const [mapelList, setMapelList] = useState([]);
+  const [tugasMapel, setTugasMapel] = useState({});
+  const [absensiMapel, setAbsensiMapel] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [activeMapel, setActiveMapel] = useState(null);
+  // Request relasi state
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [requestStatus, setRequestStatus] = useState(null);
+  const [requestLoading, setRequestLoading] = useState(false);
+  const [nisInput, setNisInput] = useState("");
+
+  useEffect(() => {
+    if (!user || user.role !== "orangtua") return;
+    setLoading(true);
+    setError("");
+    fetchWithAuth(`/api/orangtua?user_id=${user.id}`)
+      .then(res => {
+        if (!res.ok) throw new Error("Gagal mengambil data anak");
+        return res.json();
+      })
+      .then(data => {
+        const listAnak = Array.isArray(data) ? data : [];
+        setAnakList(listAnak);
+        if (listAnak.length > 0) {
+          setSelectedAnak(listAnak[0]);
+        } else {
+          // Jika belum ada anak, cek status request
+          fetchRequestStatus();
+        }
+      })
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
+  }, [user]);
+
+  const fetchRequestStatus = async () => {
+    try {
+      const res = await fetchWithAuth('/api/orangtua/request');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.requests && Array.isArray(data.requests) && data.requests.length > 0) {
+          // Cari request dengan status pending, approved, atau rejected
+          const pendingReq = data.requests.find(r => r.status === 'pending');
+          const approvedReq = data.requests.find(r => r.status === 'approved');
+          const rejectedReq = data.requests.find(r => r.status === 'rejected');
+          
+          if (pendingReq) setRequestStatus('pending');
+          else if (approvedReq) setRequestStatus('approved');
+          else if (rejectedReq) setRequestStatus('rejected');
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching request status:', err);
+    }
+  };
+
+  const handleRequest = async (e) => {
+    e.preventDefault();
+    if (!nisInput.trim()) {
+      setError("NIS anak wajib diisi");
+      return;
+    }
+    setRequestLoading(true);
+    setError("");
+    setRequestStatus(null);
+    try {
+      const res = await fetchWithAuth('/api/orangtua/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ siswa_nis: nisInput.trim() })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setRequestStatus('pending');
+        setShowRequestForm(false);
+        setNisInput("");
+        setError("");
+      } else {
+        setError(data.error || 'Gagal mengajukan request.');
+      }
+    } catch (e) {
+      setError('Gagal mengajukan request.');
+    } finally {
+      setRequestLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!selectedAnak) return;
+    async function fetchMapelTugasAbsensi() {
+      setLoading(true);
+      try {
+        const kelasId = selectedAnak.siswa_id?.kelas_id || selectedAnak.siswa_id?.kelas || selectedAnak.kelas_id;
+        if (!kelasId) throw new Error("Kelas anak tidak ditemukan");
+        // Ambil daftar mapel
+        const mapelRes = await fetchWithAuth(`/api/subjects?kelas_id=${kelasId}`);
+        if (!mapelRes.ok) throw new Error("Gagal mengambil data mapel anak");
+        const mapelArr = await mapelRes.json();
+        setMapelList(Array.isArray(mapelArr) ? mapelArr : []);
+        setActiveMapel(mapelArr[0]?._id || null);
+        // Ambil tugas & absensi per mapel
+        const tugasObj = {};
+        const absensiObj = {};
+        for (const mapel of mapelArr) {
+          const tugasRes = await fetchWithAuth(`/api/tugas?mapel_id=${mapel._id}`);
+          tugasObj[mapel._id] = tugasRes.ok ? await tugasRes.json() : [];
+          const absensiRes = await fetchWithAuth(`/api/kehadiran?mapel_id=${mapel._id}&siswa_id=${selectedAnak.siswa_id?._id || selectedAnak.siswa_id}`);
+          absensiObj[mapel._id] = absensiRes.ok ? await absensiRes.json() : [];
+        }
+        setTugasMapel(tugasObj);
+        setAbsensiMapel(absensiObj);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchMapelTugasAbsensi();
+  }, [selectedAnak]);
+
+  if (loading) return <LoadingSpinner />;
+  if (error) return <div className="p-3 bg-red-100 text-red-700 border border-red-400 rounded">{error}</div>;
+
+  return (
+    <div className="text-black space-y-6">
+      <h2 className="text-2xl font-bold">Monitoring Akademik Anak</h2>
+      {anakList.length === 0 ? (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
+          <p className="text-gray-600 dark:text-gray-400 mb-4">Belum ada anak yang terhubung dengan akun Anda.</p>
+          
+          {/* Request Status */}
+          {requestStatus === 'pending' ? (
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-2">
+                <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-yellow-800 dark:text-yellow-300 font-semibold">
+                  Request sedang diproses admin. Silakan tunggu persetujuan.
+                </p>
+              </div>
+            </div>
+          ) : requestStatus === 'approved' ? (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
+              <p className="text-green-800 dark:text-green-300 font-semibold">
+                Request sudah disetujui. Silakan refresh halaman untuk melihat data anak.
+              </p>
+            </div>
+          ) : requestStatus === 'rejected' ? (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+              <p className="text-red-800 dark:text-red-300 font-semibold">
+                Request ditolak admin. Silakan hubungi admin untuk informasi lebih lanjut.
+              </p>
+            </div>
+          ) : null}
+
+          {/* Request Form */}
+          {!requestStatus && (
+            <>
+              {showRequestForm ? (
+                <form onSubmit={handleRequest} className="space-y-4 bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      NIS Anak
+                    </label>
+                    <input
+                      type="text"
+                      value={nisInput}
+                      onChange={(e) => setNisInput(e.target.value)}
+                      placeholder="Masukkan NIS anak"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-100"
+                      required
+                      disabled={requestLoading}
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Masukkan NIS (Nomor Induk Siswa) anak Anda. Request akan ditinjau oleh admin.
+                    </p>
+                  </div>
+                  {error && (
+                    <div className="text-red-600 dark:text-red-400 text-sm">{error}</div>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      type="submit"
+                      disabled={requestLoading}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50"
+                    >
+                      {requestLoading ? "Mengirim..." : "Ajukan Request"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowRequestForm(false);
+                        setNisInput("");
+                        setError("");
+                      }}
+                      className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md transition-colors"
+                      disabled={requestLoading}
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <button
+                  onClick={() => setShowRequestForm(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                  </svg>
+                  Ajukan Hubungan ke Anak
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="mb-4">
+            <label htmlFor="anakSelect" className="font-semibold mr-2">Pilih Anak:</label>
+            <select
+              id="anakSelect"
+              className="border rounded p-2 text-black"
+              value={selectedAnak?.siswa_id?._id || selectedAnak?.siswa_id || ""}
+              onChange={e => setSelectedAnak(anakList.find(a => (a.siswa_id?._id || a.siswa_id) === e.target.value))}
+            >
+              {anakList.map((a) => (
+                <option key={a.siswa_id?._id || a.siswa_id} value={a.siswa_id?._id || a.siswa_id}>
+                  {a.siswa_id?.nama || "Nama Anak Tidak Tersedia"}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="mb-4 flex gap-2 flex-wrap">
+            {mapelList.map(m => (
+              <button key={m._id} onClick={() => setActiveMapel(m._id)} className={`px-3 py-1 rounded ${activeMapel === m._id ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}>{m.nama}</button>
+            ))}
+          </div>
+          {activeMapel && (
+            <div className="space-y-6">
+              <section>
+                <h3 className="text-xl font-semibold mb-3">Tugas Mapel: {mapelList.find(m => m._id === activeMapel)?.nama}</h3>
+                {tugasMapel[activeMapel]?.length === 0 ? <p>Tidak ada tugas untuk mapel ini.</p> : (
+                  <ul className="space-y-3">
+                    {tugasMapel[activeMapel].map(t => (
+                      <li key={t._id} className="bg-white p-4 rounded shadow">
+                        <h4 className="font-semibold">{t.judul}</h4>
+                        <p className="text-sm text-gray-600">Deadline: {new Date(t.tanggal_deadline).toLocaleString()}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+              <section>
+                <h3 className="text-xl font-semibold mb-3">Absensi Mapel: {mapelList.find(m => m._id === activeMapel)?.nama}</h3>
+                {absensiMapel[activeMapel]?.length === 0 ? <p>Tidak ada data absensi untuk mapel ini.</p> : (
+                  <ul className="space-y-2">
+                    {absensiMapel[activeMapel].map(a => (
+                      <li key={a._id} className="bg-white p-2 rounded shadow flex justify-between items-center">
+                        <span>{new Date(a.tanggal).toLocaleDateString()} - <span className="font-semibold">{a.status}</span></span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
