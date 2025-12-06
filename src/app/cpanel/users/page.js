@@ -6,6 +6,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
+import { Pencil, Trash2 } from 'lucide-react';
 
 const initialForm = {
   nama: '',
@@ -128,12 +129,12 @@ export default function UsersPage() {
   const actions = [
     {
       label: 'Edit',
-      icon: <span className="text-blue-500">✏️</span>,
+      icon: <Pencil className="w-4 h-4 text-blue-500 hover:text-blue-700" />,
       onClick: (user) => openModal(user),
     },
     {
       label: 'Hapus',
-      icon: <span className="text-red-500">🗑️</span>,
+      icon: <Trash2 className="w-4 h-4 text-red-500 hover:text-red-700" />,
       onClick: (user) => handleDelete(user._id),
     },
   ];

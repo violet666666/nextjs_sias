@@ -5,7 +5,6 @@ import Tugas from '../models/Tugas';
 import Kehadiran from '../models/Kehadiran';
 import Submission from '../models/Submission';
 import mongoose from 'mongoose';
-import Enrollment from '../models/Enrollment';
 
 class AnalyticsService {
   // Dashboard Overview Statistics
@@ -280,7 +279,8 @@ class AnalyticsService {
     const classIds = myClasses.map(k => k._id);
     
     // Count students enrolled in my classes
-    return await Enrollment.countDocuments({ kelas_id: { $in: classIds } });
+    const kelasList = await Kelas.find({ _id: { $in: classIds } });
+    return kelasList.reduce((total, k) => total + (k.siswa_ids?.length || 0), 0);
   }
 
   static async getClassPerformance(guruId) {
@@ -342,12 +342,12 @@ class AnalyticsService {
 
   // Student-specific methods
   static async getMyClassesCount(siswaId) {
-    return await Enrollment.countDocuments({ siswa_id: siswaId });
+    return await Kelas.countDocuments({ siswa_ids: siswaId });
   }
 
   static async getMyAssignmentsCount(siswaId) {
-    const myClasses = await Enrollment.find({ siswa_id: siswaId }).select('kelas_id');
-    const classIds = myClasses.map(e => e.kelas_id);
+    const myClasses = await Kelas.find({ siswa_ids: siswaId }).select('_id');
+    const classIds = myClasses.map(k => k._id);
     
     return await Tugas.countDocuments({ kelas_id: { $in: classIds } });
   }
@@ -383,8 +383,8 @@ class AnalyticsService {
   }
 
   static async getUpcomingDeadlines(siswaId, limit = 5) {
-    const myClasses = await Enrollment.find({ siswa_id: siswaId }).select('kelas_id');
-    const classIds = myClasses.map(e => e.kelas_id);
+    const myClasses = await Kelas.find({ siswa_ids: siswaId }).select('_id');
+    const classIds = myClasses.map(k => k._id);
     
     const now = new Date();
     const upcoming = await Tugas.find({

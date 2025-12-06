@@ -1,67 +1,42 @@
 'use client';
 import { useEffect, useState } from 'react';
 import ProtectedRoute from '@/components/common/ProtectedRoute';
-import DataTable from '@/components/ui/DataTable';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import Modal from '@/components/ui/Modal';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
-import Select from 'react-select';
+import AddKelasModal from '@/components/subjects/AddKelasModal';
+import AddGuruModal from '@/components/subjects/AddGuruModal';
+import AssignGuruKelasModal from '@/components/subjects/AssignGuruKelasModal';
+import Swal from 'sweetalert2';
+import { Trash2, Edit2, BookOpen, Users, GraduationCap, Link2 } from 'lucide-react';
 
 const initialForm = {
   nama: '',
   kode: '',
   deskripsi: '',
-  kelas_ids: [],
-  guru_ids: [],
+  total_jam_per_minggu: '',
 };
 
 export default function SubjectsPage() {
   const [subjects, setSubjects] = useState([]);
-  const [allClasses, setAllClasses] = useState([]);
-  const [allGuru, setAllGuru] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(initialForm);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showAddKelasModal, setShowAddKelasModal] = useState(false);
+  const [showAddGuruModal, setShowAddGuruModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [selectedSubjectId, setSelectedSubjectId] = useState(null);
 
-  // Fetch all data (subjects, classes, guru)
+  // Fetch subjects
   const fetchData = async () => {
     setLoading(true);
     setError('');
     try {
-      const [subjectsRes, classesRes, guruRes] = await Promise.all([
-        fetchWithAuth('/api/subjects'),
-        fetchWithAuth('/api/kelas'),
-        fetchWithAuth('/api/users?role=guru'),
-      ]);
-
-      if (!subjectsRes.ok) throw new Error('Gagal memuat data mata pelajaran.');
-      if (!classesRes.ok) throw new Error('Gagal memuat data kelas.');
-      if (!guruRes.ok) throw new Error('Gagal memuat data guru.');
-
-      const subjectsData = await subjectsRes.json();
-      const classesData = await classesRes.json();
-      const guruData = await guruRes.json();
-
-      setSubjects(subjectsData);
-      // Ensure IDs are strings for consistent comparison
-      // Create mapping for quick lookup
-      setAllClasses(classesData.map(c => ({ 
-        value: String(c._id), 
-        label: c.nama_kelas || 'Unknown Class',
-        _id: c._id 
-      })));
-      setAllGuru(guruData.map(g => ({ 
-        value: String(g._id), 
-        label: g.nama || 'Unknown Teacher',
-        _id: g._id 
-      })));
-
+      const res = await fetchWithAuth('/api/subjects');
+      if (!res.ok) throw new Error('Gagal memuat data mata pelajaran.');
+      const data = await res.json();
+      setSubjects(data);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -73,45 +48,14 @@ export default function SubjectsPage() {
     fetchData();
   }, []);
 
-  // Helper function to extract ID from various formats (string, object, array)
-  const extractIds = (data) => {
-    if (!data) return [];
-    if (Array.isArray(data)) {
-      return data.map(item => {
-        if (typeof item === 'string') return String(item);
-        if (typeof item === 'object' && item !== null) {
-          const id = item._id || item.id || item;
-          return id ? String(id) : null;
-        }
-        return item ? String(item) : null;
-      }).filter(Boolean);
-    }
-    if (typeof data === 'string') return [String(data)];
-    if (typeof data === 'object' && data !== null) {
-      const id = data._id || data.id || data;
-      return id ? [String(id)] : [];
-    }
-    return [];
-  };
-
   // Handle form open (add/edit)
   const openModal = (subject = null) => {
     if (subject) {
-      // Extract IDs from various formats (support populated data)
-      // Priority: new format (kelas_ids/guru_ids) > old format (kelas_id/guru_id)
-      const kelasIds = extractIds(subject.kelas_ids || subject.kelas_id);
-      const guruIds = extractIds(subject.guru_ids || subject.guru_id);
-      
-      // Ensure all IDs are strings for consistent comparison with Select options
-      const normalizedKelasIds = kelasIds.map(id => String(id));
-      const normalizedGuruIds = guruIds.map(id => String(id));
-      
       setForm({
         nama: subject.nama || '',
         kode: subject.kode || '',
         deskripsi: subject.deskripsi || '',
-        kelas_ids: normalizedKelasIds,
-        guru_ids: normalizedGuruIds,
+        total_jam_per_minggu: subject.total_jam_per_minggu || '',
       });
       setEditId(subject._id);
     } else {
@@ -127,30 +71,28 @@ export default function SubjectsPage() {
     setSaving(true);
     setError('');
     try {
-      // Ensure kelas_ids and guru_ids are arrays (not empty if required)
-      const payload = {
-        ...form,
-        kelas_ids: Array.isArray(form.kelas_ids) ? form.kelas_ids : [],
-        guru_ids: Array.isArray(form.guru_ids) ? form.guru_ids : [],
-      };
-      
-      // Validate required fields
-      if (!payload.nama || !payload.nama.trim()) {
+      if (!form.nama || !form.nama.trim()) {
         throw new Error('Nama mata pelajaran wajib diisi');
       }
-      if (!payload.kelas_ids || payload.kelas_ids.length === 0) {
-        throw new Error('Minimal satu kelas harus dipilih');
-      }
+      
+      const payload = {
+        nama: form.nama.trim(),
+        kode: form.kode.trim() || undefined,
+        deskripsi: form.deskripsi.trim() || undefined,
+        total_jam_per_minggu: form.total_jam_per_minggu ? parseInt(form.total_jam_per_minggu) || 0 : 0,
+      };
       
       const res = await fetchWithAuth(editId ? `/api/subjects/${editId}` : '/api/subjects', {
         method: editId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+      
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || 'Gagal menyimpan data.');
       }
+      
       setModalOpen(false);
       setForm(initialForm);
       setEditId(null);
@@ -163,10 +105,21 @@ export default function SubjectsPage() {
   };
 
   // Handle delete
-  const handleDelete = async (id) => {
-    setDeleteId(id);
-    setDeleteLoading(true);
-    setError('');
+  const handleDelete = async (id, nama) => {
+    const result = await Swal.fire({
+      title: 'Hapus Mata Pelajaran?',
+      text: `Apakah Anda yakin ingin menghapus "${nama}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Ya, Hapus!',
+      cancelButtonText: 'Batal',
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       const res = await fetchWithAuth(`/api/subjects/${id}`, { method: 'DELETE' });
       if (!res.ok) {
@@ -174,256 +127,372 @@ export default function SubjectsPage() {
         throw new Error(err.error || 'Gagal menghapus data.');
       }
       fetchData();
+      Swal.fire('Berhasil!', 'Mata pelajaran berhasil dihapus.', 'success');
     } catch (e) {
-      setError(e.message);
-    } finally {
-      setDeleteId(null);
-      setDeleteLoading(false);
+      Swal.fire('Error!', e.message, 'error');
     }
   };
 
-  // Helper function to get class name from various formats
-  const getClassName = (kelasData) => {
-    if (!kelasData) return null;
-    
-    // If already populated object with nama_kelas (from API populate)
-    if (typeof kelasData === 'object' && kelasData !== null) {
-      if (kelasData.nama_kelas) {
-        return kelasData.nama_kelas;
-      }
-      // Extract ID from object
-      const id = kelasData._id || kelasData.id || kelasData;
-      if (id) {
-        const kelas = allClasses.find(k => {
-          const kValue = String(k.value);
-          const dataId = String(id);
-          return kValue === dataId;
-        });
-        return kelas ? kelas.label : null;
-      }
-    }
-    
-    // If it's a string ID, find in allClasses
-    if (typeof kelasData === 'string') {
-      const kelas = allClasses.find(k => String(k.value) === kelasData);
-      return kelas ? kelas.label : null;
-    }
-    
-    return null;
+  // Handle add kelas
+  const handleAddKelas = (subjectId) => {
+    setSelectedSubjectId(subjectId);
+    setShowAddKelasModal(true);
   };
 
-  // Helper function to get teacher name from various formats
-  const getGuruName = (guruData) => {
-    if (!guruData) return null;
-    
-    // If already populated object with nama (from API populate)
-    if (typeof guruData === 'object' && guruData !== null) {
-      if (guruData.nama) {
-        return guruData.nama;
-      }
-      // Extract ID from object
-      const id = guruData._id || guruData.id || guruData;
-      if (id) {
-        const guru = allGuru.find(g => {
-          const gValue = String(g.value);
-          const dataId = String(id);
-          return gValue === dataId;
-        });
-        return guru ? guru.label : null;
-      }
-    }
-    
-    // If it's a string ID, find in allGuru
-    if (typeof guruData === 'string') {
-      const guru = allGuru.find(g => String(g.value) === guruData);
-      return guru ? guru.label : null;
-    }
-    
-    return null;
+  // Handle add guru
+  const handleAddGuru = (subjectId) => {
+    setSelectedSubjectId(subjectId);
+    setShowAddGuruModal(true);
   };
 
-  // Table columns
-  const columns = [
-    { key: 'nama', label: 'Nama' },
-    { key: 'kode', label: 'Kode' },
-    { key: 'deskripsi', label: 'Deskripsi' },
-    {
-      key: 'kelas',
-      label: 'Kelas',
-      render: (value, subject) => {
-        // Support both old (kelas_id) and new (kelas_ids) format
-        // Also support populated data (objects) and ID strings
-        let kelasData = [];
-        
-        // Priority: new format (kelas_ids) > old format (kelas_id)
-        if (subject.kelas_ids) {
-          kelasData = Array.isArray(subject.kelas_ids) ? subject.kelas_ids : [subject.kelas_ids];
-        } else if (subject.kelas_id) {
-          kelasData = Array.isArray(subject.kelas_id) ? subject.kelas_id : [subject.kelas_id];
-        }
-        
-        // Get class names using helper function
-        const kelasNames = kelasData
-          .map(kelas => getClassName(kelas))
-          .filter(Boolean);
-        
-        // Return joined names or dash if empty
-        if (kelasNames.length > 0) {
-          return (
-            <span className="text-gray-900 dark:text-gray-100">
-              {kelasNames.join(', ')}
-            </span>
-          );
-        }
-        return <span className="text-gray-400 dark:text-gray-500">-</span>;
-      },
-    },
-    {
-      key: 'guru',
-      label: 'Guru Pengampu',
-      render: (value, subject) => {
-        // Support both old (guru_id) and new (guru_ids) format
-        // Also support populated data (objects) and ID strings
-        let guruData = [];
-        
-        // Priority: new format (guru_ids) > old format (guru_id)
-        if (subject.guru_ids) {
-          guruData = Array.isArray(subject.guru_ids) ? subject.guru_ids : [subject.guru_ids];
-        } else if (subject.guru_id) {
-          guruData = Array.isArray(subject.guru_id) ? subject.guru_id : [subject.guru_id];
-        }
-        
-        // Get teacher names using helper function
-        const guruNames = guruData
-          .map(guru => getGuruName(guru))
-          .filter(Boolean);
-        
-        // Return joined names or dash if empty
-        if (guruNames.length > 0) {
-          return (
-            <span className="text-gray-900 dark:text-gray-100">
-              {guruNames.join(', ')}
-            </span>
-          );
-        }
-        return <span className="text-gray-400 dark:text-gray-500">-</span>;
-      },
-    },
-  ];
+  // Get kelas names
+  const getKelasNames = (subject) => {
+    const kelasData = subject.kelas_ids || [];
+    return kelasData
+      .map(k => {
+        if (typeof k === 'object' && k?.nama_kelas) return k.nama_kelas;
+        return null;
+      })
+      .filter(Boolean);
+  };
 
-  // Table actions
-  const actions = [
-    {
-      label: 'Edit',
-      icon: <span className="text-blue-500">✏️</span>,
-      onClick: (subject) => openModal(subject),
-    },
-    {
-      label: 'Hapus',
-      icon: <span className="text-red-500">🗑️</span>,
-      onClick: (subject) => handleDelete(subject._id),
-    },
-  ];
+  // Get guru names
+  const getGuruNames = (subject) => {
+    const guruData = subject.guru_ids || [];
+    return guruData
+      .map(g => {
+        if (typeof g === 'object' && g?.nama) return g.nama;
+        return null;
+      })
+      .filter(Boolean);
+  };
 
   return (
     <ProtectedRoute requiredRoles={['admin']}>
-      <div className="max-w-5xl mx-auto py-8">
+      <div className="max-w-7xl mx-auto py-8 px-4">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Manajemen Mata Pelajaran</h1>
-          <Button onClick={() => openModal()} color="primary">Tambah Mata Pelajaran</Button>
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">Manajemen Mata Pelajaran</h1>
+          <button
+            onClick={() => openModal()}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          >
+            <BookOpen className="w-5 h-5" />
+            Tambah Mata Pelajaran
+          </button>
         </div>
-        {error && <div className="text-red-500 mb-4">{error}</div>}
+
+        {error && <div className="text-red-500 mb-4 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">{error}</div>}
+
         {loading ? (
-          <div>Loading...</div>
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-400">Memuat data...</p>
+          </div>
+        ) : subjects.length === 0 ? (
+          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg shadow">
+            <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <p className="text-gray-500 dark:text-gray-400">Belum ada mata pelajaran</p>
+          </div>
         ) : (
-          <DataTable data={subjects} columns={columns} actions={actions} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {subjects.map((subject) => {
+              const kelasNames = getKelasNames(subject);
+              const guruNames = getGuruNames(subject);
+              
+              return (
+                <div
+                  key={subject._id}
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-shadow"
+                >
+                  <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
+                          {subject.nama}
+                        </h3>
+                        {subject.kode && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Kode: {subject.kode}</p>
+                        )}
+                        {subject.total_jam_per_minggu && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Total Jam/Minggu: {subject.total_jam_per_minggu} jam</p>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => openModal(subject)}
+                          className="p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(subject._id, subject.nama)}
+                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                          title="Hapus"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    {subject.deskripsi && (
+                      <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3">
+                        {subject.deskripsi}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    {/* Kelas Ajar */}
+                    <div className="pb-3 border-b border-gray-200 dark:border-gray-700 last:border-b-0">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          <BookOpen className="w-4 h-4" />
+                          Kelas Ajar
+                        </span>
+                        <button
+                          onClick={() => handleAddKelas(subject._id)}
+                          className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                        >
+                          {kelasNames.length > 0 ? (
+                            <>
+                              <Edit2 className="w-3 h-3" />
+                              Edit
+                            </>
+                          ) : (
+                            '+ Tambah'
+                          )}
+                        </button>
+                      </div>
+                      {kelasNames.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {kelasNames.map((nama, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded"
+                            >
+                              {nama}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 dark:text-gray-500">Belum ada kelas</p>
+                      )}
+                    </div>
+
+                    {/* Guru Mata Pelajaran */}
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          <GraduationCap className="w-4 h-4" />
+                          Guru Mata Pelajaran
+                        </span>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleAddGuru(subject._id)}
+                            className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                          >
+                            {guruNames.length > 0 ? (
+                              <>
+                                <Edit2 className="w-3 h-3" />
+                                Edit
+                              </>
+                            ) : (
+                              '+ Tambah'
+                            )}
+                          </button>
+                          {guruNames.length > 0 && kelasNames.length > 0 && (
+                            <button
+                              onClick={() => {
+                                setSelectedSubjectId(subject._id);
+                                setShowAssignModal(true);
+                              }}
+                              className="text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
+                              title="Assign Guru ke Kelas Spesifik"
+                            >
+                              <Link2 className="w-3 h-3" />
+                              Assign
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {guruNames.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {guruNames.map((nama, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 text-xs bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 rounded"
+                            >
+                              {nama}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 dark:text-gray-500">Belum ada guru</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
-        {/* Modal Tambah/Edit */}
+
+        {/* Modal Tambah/Edit Mata Pelajaran */}
         {modalOpen && (
-          <Modal open={modalOpen} onClose={() => {
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onClick={() => {
             setModalOpen(false);
             setForm(initialForm);
             setEditId(null);
             setError('');
           }}>
-            <form onSubmit={handleSubmit} className="space-y-4 p-4">
-              <h2 className="text-xl font-bold mb-2">{editId ? 'Edit Mata Pelajaran' : 'Tambah Mata Pelajaran'}</h2>
-              <Input
-                label="Nama"
-                value={form.nama}
-                onChange={e => setForm(f => ({ ...f, nama: e.target.value }))}
-                required
-              />
-              <Input
-                label="Kode"
-                value={form.kode}
-                onChange={e => setForm(f => ({ ...f, kode: e.target.value }))}
-              />
-              <Input
-                label="Deskripsi"
-                value={form.deskripsi}
-                onChange={e => setForm(f => ({ ...f, deskripsi: e.target.value }))}
-              />
-              <div>
-                <label className="block mb-1 font-medium text-gray-700 dark:text-gray-300">Kelas (dapat memilih lebih dari 1)</label>
-                <Select
-                  isMulti={true}
-                  options={allClasses}
-                  value={allClasses.filter(option => {
-                    // Convert both to string for comparison
-                    const formId = String(option.value);
-                    return form.kelas_ids.some(id => String(id) === formId);
-                  })}
-                  onChange={selectedOptions => {
-                    const newKelasIds = selectedOptions ? selectedOptions.map(opt => opt.value) : [];
-                    setForm(f => ({ ...f, kelas_ids: newKelasIds }));
-                  }}
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                  placeholder="Pilih kelas..."
-                  isClearable
-                />
-              </div>
-              <div>
-                <label className="block mb-1 font-medium text-gray-700 dark:text-gray-300">Guru Pengampu (dapat memilih lebih dari 1)</label>
-                <Select
-                  isMulti={true}
-                  options={allGuru}
-                  value={allGuru.filter(option => {
-                    // Convert both to string for comparison
-                    const formId = String(option.value);
-                    return form.guru_ids.some(id => String(id) === formId);
-                  })}
-                  onChange={selectedOptions => {
-                    const newGuruIds = selectedOptions ? selectedOptions.map(opt => opt.value) : [];
-                    setForm(f => ({ ...f, guru_ids: newGuruIds }));
-                  }}
-                  className="react-select-container"
-                  classNamePrefix="react-select"
-                  placeholder="Pilih guru..."
-                  isClearable
-                />
-              </div>
-              {error && <div className="text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">{error}</div>}
-              <div className="flex justify-end gap-2">
-                <Button 
-                  type="button" 
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                  {editId ? 'Edit Mata Pelajaran' : 'Tambah Mata Pelajaran'}
+                </h2>
+                <button
                   onClick={() => {
                     setModalOpen(false);
                     setForm(initialForm);
                     setEditId(null);
                     setError('');
-                  }} 
-                  variant="outline"
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-2xl font-bold"
                 >
-                  Batal
-                </Button>
-                <Button type="submit" color="primary" loading={saving}>{editId ? 'Simpan' : 'Tambah'}</Button>
+                  ×
+                </button>
               </div>
-            </form>
-          </Modal>
+
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                <div>
+                  <label className="block mb-2 font-medium text-gray-700 dark:text-gray-300">
+                    Nama Mata Pelajaran <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={form.nama}
+                    onChange={e => setForm(f => ({ ...f, nama: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-2 font-medium text-gray-700 dark:text-gray-300">
+                    Kode
+                  </label>
+                  <input
+                    type="text"
+                    value={form.kode}
+                    onChange={e => setForm(f => ({ ...f, kode: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-2 font-medium text-gray-700 dark:text-gray-300">
+                    Deskripsi
+                  </label>
+                  <textarea
+                    value={form.deskripsi}
+                    onChange={e => setForm(f => ({ ...f, deskripsi: e.target.value }))}
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    placeholder="Deskripsi singkat mata pelajaran..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-2 font-medium text-gray-700 dark:text-gray-300">
+                    Total Jam Per Minggu
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={form.total_jam_per_minggu}
+                    onChange={e => setForm(f => ({ ...f, total_jam_per_minggu: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                    placeholder="Contoh: 2"
+                  />
+                </div>
+
+                {error && <div className="text-red-500 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg text-sm">{error}</div>}
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalOpen(false);
+                      setForm(initialForm);
+                      setEditId(null);
+                      setError('');
+                    }}
+                    className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? 'Menyimpan...' : editId ? 'Simpan' : 'Tambah'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Modal Tambah Kelas */}
+        {showAddKelasModal && selectedSubjectId && (
+          <AddKelasModal
+            subjectId={selectedSubjectId}
+            currentKelasIds={subjects.find(s => s._id === selectedSubjectId)?.kelas_ids || []}
+            onSuccess={() => {
+              fetchData();
+              setShowAddKelasModal(false);
+              setSelectedSubjectId(null);
+            }}
+            onClose={() => {
+              setShowAddKelasModal(false);
+              setSelectedSubjectId(null);
+            }}
+          />
+        )}
+
+        {/* Modal Tambah Guru */}
+        {showAddGuruModal && selectedSubjectId && (
+          <AddGuruModal
+            subjectId={selectedSubjectId}
+            currentGuruIds={subjects.find(s => s._id === selectedSubjectId)?.guru_ids || []}
+            onSuccess={() => {
+              fetchData();
+              setShowAddGuruModal(false);
+              setSelectedSubjectId(null);
+            }}
+            onClose={() => {
+              setShowAddGuruModal(false);
+              setSelectedSubjectId(null);
+            }}
+          />
+        )}
+
+        {/* Modal Assign Guru ke Kelas */}
+        {showAssignModal && selectedSubjectId && (
+          <AssignGuruKelasModal
+            subjectId={selectedSubjectId}
+            onClose={() => {
+              setShowAssignModal(false);
+              setSelectedSubjectId(null);
+            }}
+            onSuccess={() => {
+              fetchData();
+            }}
+          />
         )}
       </div>
     </ProtectedRoute>
   );
-} 
+}

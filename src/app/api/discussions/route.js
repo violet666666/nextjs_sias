@@ -4,7 +4,6 @@ import DiscussionThread from '@/lib/models/DiscussionThread';
 import { authenticateAndAuthorize } from '@/lib/authMiddleware';
 import NotificationService from '@/lib/services/notificationService';
 import Kelas from '@/lib/models/Kelas';
-import Enrollment from '@/lib/models/Enrollment';
 
 // GET: List thread diskusi per kelas
 export async function GET(request) {
@@ -42,9 +41,8 @@ export async function POST(request) {
     });
 
     // Notifikasi otomatis ke semua siswa & guru di kelas (kecuali author)
-    const kelas = await Kelas.findById(kelas_id);
-    const enrollments = await Enrollment.find({ kelas_id });
-    const siswaIds = enrollments.map(e => e.siswa_id.toString());
+    const kelas = await Kelas.findById(kelas_id).populate('siswa_ids');
+    const siswaIds = kelas.siswa_ids.map(s => (s._id || s).toString());
     const guruId = kelas.guru_id.toString();
     const targetUserIds = [...siswaIds, guruId].filter(id => id !== user.id.toString());
     if (targetUserIds.length > 0) {

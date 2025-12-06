@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Orangtua from '@/lib/models/Orangtua';
-import Enrollment from '@/lib/models/Enrollment';
 import Kelas from '@/lib/models/Kelas';
 import Submission from '@/lib/models/Submission';
 import Kehadiran from '@/lib/models/Kehadiran';
@@ -38,10 +37,10 @@ export async function GET(request) {
       return r.siswa_ids.filter(s => s && (s._id || s));
     });
 
-    // Ambil data enrollment anak-anak
-    const enrollments = await Enrollment.find({ siswa_id: { $in: anakIds } })
-      .populate('kelas_id', 'nama_kelas guru_id')
-      .populate('siswa_id', 'nama email');
+    // Ambil data kelas yang memiliki anak-anak di siswa_ids
+    const kelasWithAnak = await Kelas.find({ siswa_ids: { $in: anakIds } })
+      .populate('guru_id', 'nama email')
+      .populate('siswa_ids', 'nama email nis');
 
     // Ambil data nilai anak-anak
     const submissions = await Submission.find({ siswa_id: { $in: anakIds } })
@@ -65,10 +64,10 @@ export async function GET(request) {
       const anakEmail = anak.email || '-';
       const anakNis = anak.nis || '-';
       
-      // Data kelas anak
-      const anakEnrollments = enrollments.filter(e => {
-        const siswaId = e.siswa_id?._id ? e.siswa_id._id.toString() : e.siswa_id?.toString();
-        return siswaId === anakId;
+      // Data kelas anak - cari kelas yang memiliki anak ini di siswa_ids
+      const anakKelas = kelasWithAnak.filter(k => {
+        const siswaIds = k.siswa_ids.map(s => (s._id || s).toString());
+        return siswaIds.includes(anakId);
       });
       
       // Data nilai anak
@@ -96,10 +95,10 @@ export async function GET(request) {
         nama: anakNama,
         email: anakEmail,
         nis: anakNis,
-        kelas: anakEnrollments.map(e => ({
-          id: e.kelas_id?._id || e.kelas_id,
-          nama: e.kelas_id?.nama_kelas || '-',
-          guru_id: e.kelas_id?.guru_id || null
+        kelas: anakKelas.map(k => ({
+          id: k._id,
+          nama: k.nama_kelas || '-',
+          guru_id: k.guru_id?._id || k.guru_id || null
         })),
         averageGrade,
         attendanceRate,

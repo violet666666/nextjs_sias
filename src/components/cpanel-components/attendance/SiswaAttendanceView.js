@@ -8,29 +8,29 @@ export default function SiswaAttendanceView({ user, setToast }) {
   const [activeSessionsForSiswa, setActiveSessionsForSiswa] = useState([]);
   const [isSubmittingAttendance, setIsSubmittingAttendance] = useState(false);
   const [myAttendances, setMyAttendances] = useState([]);
-  const [myEnrollments, setMyEnrollments] = useState([]);
+  const [myKelas, setMyKelas] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
 
   const fetchSiswaData = useCallback(async () => {
     if (!user || user.role !== "siswa") return;
     setLoadingData(true);
     try {
-      const [activeSessionsRes, myAttendancesRes, enrollmentsRes] = await Promise.all([
+      const [activeSessionsRes, myAttendancesRes, kelasRes] = await Promise.all([
         fetchWithAuth(`/api/attendance-sessions?status=open`), // Gunakan fetchWithAuth
         fetchWithAuth(`/api/kehadiran?siswa_id=${user.id}`), // Gunakan fetchWithAuth
-        fetchWithAuth(`/api/enrollments?siswa_id=${user.id}`) // Gunakan fetchWithAuth
+        fetchWithAuth(`/api/kelas?siswa_id=${user.id}`) // Gunakan fetchWithAuth
       ]);
 
       if (!activeSessionsRes.ok) throw new Error(`Gagal mengambil sesi aktif: ${activeSessionsRes.statusText}`);
       if (!myAttendancesRes.ok) throw new Error(`Gagal mengambil riwayat absensi: ${myAttendancesRes.statusText}`);
-      if (!enrollmentsRes.ok) throw new Error(`Gagal mengambil data enrollment: ${enrollmentsRes.statusText}`);
+      if (!kelasRes.ok) throw new Error(`Gagal mengambil data kelas: ${kelasRes.statusText}`);
       
       const activeSessionsData = await activeSessionsRes.json();
       const myAttendancesData = await myAttendancesRes.json();
-      const enrollmentsData = await enrollmentsRes.json();
+      const kelasData = await kelasRes.json();
       
-      setMyEnrollments(enrollmentsData);
-      const enrolledKelasIds = enrollmentsData.map(e => e.kelas_id._id);
+      setMyKelas(kelasData);
+      const enrolledKelasIds = kelasData.map(k => k._id);
 
       // Filter sesi aktif berdasarkan kelas yang diikuti siswa
       const filteredActiveSessions = activeSessionsData.filter(session => 

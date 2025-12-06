@@ -16,10 +16,19 @@ export default function AddStudentModal({ kelasId, onSuccess, onClose }) {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetchWithAuth('/api/users?role=siswa');
-        if (!res.ok) throw new Error('Gagal mengambil data siswa');
-        const data = await res.json();
-        setStudents(data);
+        // Ambil semua siswa
+        const resAll = await fetchWithAuth('/api/users?role=siswa');
+        if (!resAll.ok) throw new Error('Gagal mengambil data siswa');
+        const allStudents = await resAll.json();
+        
+        // Ambil siswa yang sudah terdaftar di kelas
+        const resEnrolled = await fetchWithAuth(`/api/kelas/${kelasId}/students`);
+        const enrolledStudents = resEnrolled.ok ? await resEnrolled.json() : [];
+        const enrolledIds = enrolledStudents.map(s => s._id || s).map(id => id.toString());
+        
+        // Filter siswa yang belum terdaftar
+        const availableStudents = allStudents.filter(s => !enrolledIds.includes(s._id.toString()));
+        setStudents(availableStudents);
       } catch (err) {
         setError(err.message);
         setStudents([]);
@@ -56,10 +65,10 @@ export default function AddStudentModal({ kelasId, onSuccess, onClose }) {
     }
     setSubmitting(true);
     try {
-      const res = await fetchWithAuth('/api/enrollments', {
+      const res = await fetchWithAuth(`/api/kelas/${kelasId}/students`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kelas_id: kelasId, siswa_id: selected })
+        body: JSON.stringify({ siswa_id: selected })
       });
       if (!res.ok) {
         const data = await res.json();

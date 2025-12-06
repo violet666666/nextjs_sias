@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 
-export default function Toast({ message, type = 'info', onClose, duration = 3000 }) {
+export default function Toast({ message, type = 'info', onClose, duration = 3000, icon }) {
   useEffect(() => {
     if (!message) return;
     const timer = setTimeout(() => {
@@ -32,7 +32,10 @@ export default function Toast({ message, type = 'info', onClose, duration = 3000
       aria-atomic="true"
     >
       <div className="flex items-center justify-between gap-2">
-        <span>{message}</span>
+        <div className="flex items-center gap-2">
+          {icon && <span className="flex-shrink-0">{icon}</span>}
+          <span>{message}</span>
+        </div>
         <button
           className="ml-4 text-lg font-bold text-gray-400 hover:text-gray-700 focus:outline-none"
           aria-label="Tutup notifikasi"

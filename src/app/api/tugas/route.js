@@ -62,20 +62,69 @@ export async function POST(request) {
 
     await connectDB();
     const body = await request.json();
-    const { mapel_id, judul, deskripsi, tanggal_deadline } = body;
+    const { mapel_id, kelas_id: bodyKelasId, judul, deskripsi, tanggal_deadline } = body;
 
     if (!mapel_id || !judul || !tanggal_deadline) {
       return NextResponse.json({ error: 'Field wajib tidak boleh kosong' }, { status: 400 });
     }
 
-    // Ambil kelas_id dari mapel
+    // Ambil mata pelajaran
     const mapel = await MataPelajaran.findById(mapel_id);
     if (!mapel) {
       return NextResponse.json({ error: 'Mata pelajaran tidak ditemukan.' }, { status: 404 });
     }
-    const kelas_id = mapel.kelas_id;
 
-    // Perbaikan: guru_id diisi otomatis dari user login
+    // Validasi: Jika guru, pastikan dia mengajar mata pelajaran ini
+    if (currentUser.role === 'guru') {
+      // Cek apakah ada assignment spesifik untuk guru-kelas ini
+      const assignments = mapel.guru_kelas_assignments || [];
+      const hasSpecificAssignment = assignments.some(a => 
+        a.guru_id.toString() === currentUser.id.toString() && 
+        (bodyKelasId ? a.kelas_id.toString() === bodyKelasId.toString() : true)
+      );
+      
+      // Jika ada assignment spesifik, gunakan itu
+      if (assignments.length > 0) {
+        if (!hasSpecificAssignment) {
+          return NextResponse.json({ error: 'Anda tidak ditugaskan untuk mengajar mata pelajaran ini di kelas tersebut.' }, { status: 403 });
+        }
+      } else {
+        // Fallback: cek apakah guru ada di guru_ids (untuk backward compatibility)
+        const guruIds = mapel.guru_ids || [];
+        const isTeacher = guruIds.some(gId => {
+          const gIdStr = typeof gId === 'object' ? gId.toString() : gId.toString();
+          return gIdStr === currentUser.id.toString();
+        });
+        if (!isTeacher) {
+          return NextResponse.json({ error: 'Anda tidak berhak memberikan tugas untuk mata pelajaran ini.' }, { status: 403 });
+        }
+      }
+    }
+
+    // Tentukan kelas_id
+    let kelas_id;
+    if (bodyKelasId) {
+      // Validasi bahwa kelas_id ada di kelas_ids mata pelajaran
+      const kelasIds = mapel.kelas_ids || [];
+      const kelasIdStr = bodyKelasId.toString();
+      const isValidKelas = kelasIds.some(kId => {
+        const kIdStr = typeof kId === 'object' ? kId.toString() : kId.toString();
+        return kIdStr === kelasIdStr;
+      });
+      if (!isValidKelas) {
+        return NextResponse.json({ error: 'Kelas tidak valid untuk mata pelajaran ini.' }, { status: 400 });
+      }
+      kelas_id = bodyKelasId;
+    } else {
+      // Gunakan kelas pertama dari mata pelajaran
+      const kelas_ids = mapel.kelas_ids || [];
+      if (kelas_ids.length === 0) {
+        return NextResponse.json({ error: 'Mata pelajaran belum di-assign ke kelas manapun.' }, { status: 400 });
+      }
+      kelas_id = kelas_ids[0];
+    }
+
+    // Set guru_id
     const tugasData = { kelas_id, mapel_id, judul, deskripsi, tanggal_deadline };
     if (currentUser.role === 'guru') {
       tugasData.guru_id = currentUser.id;
@@ -92,15 +141,23 @@ export async function POST(request) {
       kelas_id,
       {
         title: 'Tugas Baru',
-        text: `Tugas baru "${judul}" telah ditambahkan untuk kelas Anda.`,
-        type: 'assignment',
-        link: `/cpanel/tasks`
+        message: `Tugas baru "${judul}" telah ditambahkan untuk kelas Anda.`,
+        type: 'task',
+        category: 'academic',
+        priority: 'medium',
+        actionRequired: true,
+        actionUrl: `/cpanel/tasks`,
+        actionText: 'Lihat Tugas'
       },
       {
         title: 'Tugas Baru Anak Anda',
-        text: `Anak Anda mendapat tugas baru "${judul}" dari guru.`,
-        type: 'assignment',
-        link: `/cpanel/children`
+        message: `Anak Anda mendapat tugas baru "${judul}" dari guru.`,
+        type: 'task',
+        category: 'academic',
+        priority: 'medium',
+        actionRequired: true,
+        actionUrl: `/cpanel/children`,
+        actionText: 'Lihat Detail'
       }
     );
 

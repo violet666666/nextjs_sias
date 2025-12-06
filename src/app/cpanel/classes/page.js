@@ -6,6 +6,8 @@ import Toast from "@/components/common/Toast";
 import { exportClassSchedulePDF, downloadPDF } from "@/lib/pdfExporter";
 import ProtectedRoute from '@/components/common/ProtectedRoute';
 import ResponsiveTable from '@/components/common/ResponsiveTable';
+import { Eye, Trash2 } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 export default function ClassesPage() {
   const [classes, setClasses] = useState([]);
@@ -17,6 +19,7 @@ export default function ClassesPage() {
   const [toast, setToast] = useState({ message: "", type: "success" });
   const [guruList, setGuruList] = useState([]);
   const [exporting, setExporting] = useState(false);
+  const [deletingClassId, setDeletingClassId] = useState(null);
 
   useEffect(() => {
     const stored = localStorage.getItem("user");
@@ -36,11 +39,12 @@ export default function ClassesPage() {
         // Pastikan data adalah array sebelum filter
         const kelasData = Array.isArray(data) ? data : [];
         if (u.role === "guru") {
-          const guruId = u._id || u.id; // Pastikan u.id atau u._id konsisten dengan token
-          setClasses(kelasData.filter((k) =>
-            k.guru_id?._id === guruId || // Utamakan perbandingan dengan _id jika guru_id adalah ObjectId
-            k.guru_id === guruId // Fallback jika guru_id adalah string
-          ));
+          const guruId = (u._id || u.id)?.toString(); // Convert ke string untuk perbandingan konsisten
+          setClasses(kelasData.filter((k) => {
+            // Handle guru_id yang bisa berupa object atau string
+            const kelasGuruId = k.guru_id?._id ? k.guru_id._id.toString() : (k.guru_id?.toString() || k.guru_id);
+            return kelasGuruId === guruId;
+          }));
         } else {
           setClasses(kelasData);
         }
@@ -108,6 +112,54 @@ export default function ClassesPage() {
     }
   };
 
+  const handleDelete = async (kelasId) => {
+    const kelas = classes.find(k => k._id === kelasId);
+    const kelasName = kelas?.nama_kelas || 'kelas ini';
+    
+    const result = await Swal.fire({
+      title: 'Apakah Anda yakin?',
+      text: `Kelas "${kelasName}" akan dihapus secara permanen!`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Ya, Hapus!',
+      cancelButtonText: 'Batal',
+      reverseButtons: true
+    });
+    
+    if (!result.isConfirmed) {
+      return;
+    }
+    
+    setDeletingClassId(kelasId);
+    
+    try {
+      const res = await fetchWithAuth(`/api/kelas/${kelasId}`, {
+        method: "DELETE",
+      });
+      
+      if (res.ok) {
+        // Hapus kelas dari state tanpa refresh halaman
+        setClasses(prevClasses => {
+          const filtered = prevClasses.filter(k => k._id !== kelasId);
+          return filtered;
+        });
+        setToast({ message: "Kelas berhasil dihapus!", type: "success" });
+      } else {
+        const data = await res.json();
+        setToast({ message: data.error || "Gagal menghapus kelas", type: "error" });
+        Swal.fire('Error', data.error || "Gagal menghapus kelas", 'error');
+      }
+    } catch (error) {
+      console.error("Error deleting class:", error);
+      setToast({ message: "Gagal menghapus kelas", type: "error" });
+      Swal.fire('Error', "Gagal menghapus kelas", 'error');
+    } finally {
+      setDeletingClassId(null);
+    }
+  };
+
   return (
     <ProtectedRoute requiredRoles={['admin','guru','siswa']}>
       <div className="min-h-screen p-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
@@ -132,9 +184,6 @@ export default function ClassesPage() {
                 </svg>
                 {exporting ? "Mengekspor..." : "Export PDF"}
               </button>
-            )}
-            {user && user.role === "guru" && (
-              <button onClick={handleShowModal} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold transition-colors duration-200">+ Buat Kelas</button>
             )}
             {user && user.role === "admin" && (
               <button onClick={handleShowModal} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold transition-colors duration-200">+ Tambah Kelas</button>
@@ -236,7 +285,32 @@ export default function ClassesPage() {
                         <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100 capitalize">{kelas.status_kelas}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">{kelas.guru_id?.nama || '-'}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">
-                          <Link href={`/cpanel/classes/${kelas._id}`} className="text-blue-500 hover:underline">Detail</Link>
+                          <div className="flex items-center gap-3">
+                            <Link 
+                              href={`/cpanel/classes/${kelas._id}`} 
+                              className="inline-flex items-center justify-center p-2 text-blue-500 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors duration-200"
+                              title="Detail"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Link>
+                            {user && user.role === "admin" && (
+                              <button
+                                onClick={() => handleDelete(kelas._id)}
+                                disabled={deletingClassId === kelas._id}
+                                className="inline-flex items-center justify-center p-2 text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                title="Hapus"
+                              >
+                                {deletingClassId === kelas._id ? (
+                                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))

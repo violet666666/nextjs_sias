@@ -38,10 +38,10 @@ export default function RemindersPage() {
 
                     let tugasApiUrl = "/api/tugas";
                     if (user.role === 'siswa') {
-                        const enrollRes = await fetchWithAuth(`/api/enrollments?siswa_id=${user.id}`);
-                        if (enrollRes.ok) {
-                            const enrollments = await enrollRes.json();
-                            const kelasIds = Array.isArray(enrollments) ? enrollments.map(e => e.kelas_id?._id || e.kelas_id).filter(Boolean) : [];
+                        const kelasRes = await fetchWithAuth(`/api/kelas?siswa_id=${user.id}`);
+                        if (kelasRes.ok) {
+                            const kelasList = await kelasRes.json();
+                            const kelasIds = Array.isArray(kelasList) ? kelasList.map(k => k._id).filter(Boolean) : [];
                             if (kelasIds.length > 0) {
                                 tugasApiUrl = `/api/tugas?kelas_ids=${kelasIds.join(',')}`;
                             } else {

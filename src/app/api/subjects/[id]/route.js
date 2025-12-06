@@ -15,9 +15,9 @@ export async function GET(request, { params }) {
     await connectDB();
     const subject = await MataPelajaran.findById(id)
       .populate('guru_ids', 'nama email')
-      .populate('guru_id', 'nama email')
       .populate('kelas_ids', 'nama_kelas')
-      .populate('kelas_id', 'nama_kelas');
+      .populate('guru_kelas_assignments.guru_id', 'nama email')
+      .populate('guru_kelas_assignments.kelas_id', 'nama_kelas tahun_ajaran');
     if (!subject) return NextResponse.json({ error: 'Mata pelajaran tidak ditemukan' }, { status: 404 });
     return NextResponse.json(subject);
   } catch (error) {
@@ -37,27 +37,29 @@ export async function PUT(request, context) {
     userId = authResult.user.id || authResult.user._id;
     await connectDB();
     const body = await request.json();
-    const { kelas_ids, guru_ids, kelas_id, guru_id } = body;
+    const { kelas_ids, guru_ids } = body;
 
     // Get the old subject to compare classes
     const oldSubject = await MataPelajaran.findById(id);
     if (!oldSubject) return NextResponse.json({ error: 'Mata pelajaran tidak ditemukan' }, { status: 404 });
     
-    // Normalize to new format
-    const finalKelasIds = kelas_ids || (kelas_id ? [kelas_id] : oldSubject.kelas_ids || (oldSubject.kelas_id ? [oldSubject.kelas_id] : []));
-    const finalGuruIds = guru_ids || (guru_id ? [guru_id] : oldSubject.guru_ids || (oldSubject.guru_id ? [oldSubject.guru_id] : []));
+    // Normalize to array format
+    const finalKelasIds = Array.isArray(kelas_ids) ? kelas_ids : (kelas_ids ? [kelas_ids] : (oldSubject.kelas_ids || []));
+    const finalGuruIds = Array.isArray(guru_ids) ? guru_ids : (guru_ids ? [guru_ids] : (oldSubject.guru_ids || []));
     
-    const oldKelasIds = oldSubject.kelas_ids || (oldSubject.kelas_id ? [oldSubject.kelas_id.toString()] : []);
-    const oldGuruIds = oldSubject.guru_ids || (oldSubject.guru_id ? [oldSubject.guru_id.toString()] : []);
+    const oldKelasIds = (oldSubject.kelas_ids || []).map(id => id.toString());
+    const oldGuruIds = (oldSubject.guru_ids || []).map(id => id.toString());
 
     // Update the subject with normalized data
     const updateData = {
       ...body,
       kelas_ids: finalKelasIds,
-      guru_ids: finalGuruIds,
-      kelas_id: finalKelasIds[0] || null, // Keep backward compatibility
-      guru_id: finalGuruIds[0] || null
+      guru_ids: finalGuruIds
     };
+    // Remove kelas_id and guru_id from updateData if they exist
+    delete updateData.kelas_id;
+    delete updateData.guru_id;
+    
     const subject = await MataPelajaran.findByIdAndUpdate(id, updateData, { new: true });
 
     // Sync class relationships - remove from old classes, add to new ones
@@ -94,8 +96,8 @@ export async function DELETE(request, context) {
     const subject = await MataPelajaran.findByIdAndDelete(id);
     if (!subject) return NextResponse.json({ error: 'Mata pelajaran tidak ditemukan' }, { status: 404 });
     
-    // Remove subject from all associated classes (support both old and new format)
-    const kelasIds = subject.kelas_ids || (subject.kelas_id ? [subject.kelas_id] : []);
+    // Remove subject from all associated classes
+    const kelasIds = subject.kelas_ids || [];
     for (const kId of kelasIds) {
       await Kelas.findByIdAndUpdate(kId, { $pull: { matapelajaran_ids: subject._id } });
     }

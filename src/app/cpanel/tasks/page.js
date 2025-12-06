@@ -43,21 +43,25 @@ export default function TasksPage() {
     setLoading(true);
     setError("");
     try {
-      const enrollRes = await fetchWithAuth(`/api/enrollments?siswa_id=${siswaId}`);
-      if (!enrollRes.ok) throw new Error("Gagal mengambil data enrollment");
-      const enrollments = await enrollRes.json();
-      const kelasIds = Array.isArray(enrollments) ? enrollments.map(e => e.kelas_id?._id || e.kelas_id) : [];
-      const [kelasRes, tugasRes, submissionsRes] = await Promise.all([
-        fetchWithAuth(`/api/kelas`),
+      // Ambil kelas yang memiliki siswa ini di siswa_ids
+      const kelasSiswaRes = await fetchWithAuth(`/api/kelas?siswa_id=${siswaId}`);
+      if (!kelasSiswaRes.ok) throw new Error("Gagal mengambil data kelas");
+      const kelasList = await kelasSiswaRes.json();
+      const kelasIds = Array.isArray(kelasList) ? kelasList.map(k => k._id) : [];
+      
+      // Set kelas siswa langsung dari hasil query
+      setKelasSiswa(Array.isArray(kelasList) ? kelasList : []);
+      
+      // Fetch tugas dan submissions
+      const [tugasRes, submissionsRes] = await Promise.all([
         fetchWithAuth(`/api/tugas`),
         fetchWithAuth(`/api/submissions?siswa_id=${siswaId}`)
       ]);
-      if (!kelasRes.ok) throw new Error("Gagal mengambil data kelas");
-      const semuaKelas = await kelasRes.json();
-      setKelasSiswa(Array.isArray(semuaKelas) ? semuaKelas.filter(k => kelasIds.includes(k._id)) : []);
+      
       if (!tugasRes.ok) throw new Error("Gagal mengambil data tugas");
       const semuaTugas = await tugasRes.json();
       setTugasSiswa(Array.isArray(semuaTugas) ? semuaTugas.filter(t => kelasIds.includes(t.kelas_id?._id || t.kelas_id)) : []);
+      
       if (!submissionsRes.ok) throw new Error("Gagal mengambil data submission");
       setSubmissions(await submissionsRes.json());
     } catch (err) {

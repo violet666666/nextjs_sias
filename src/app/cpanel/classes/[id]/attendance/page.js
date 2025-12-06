@@ -28,11 +28,11 @@ export default function AttendancePage() {
         if (!res.ok) throw new Error("Gagal mengambil data kelas");
         const data = await res.json();
         setKelas(data);
-        // Untuk students, lebih baik fetch dari enrollments
-        const enrollRes = await fetchWithAuth(`/api/enrollments?kelas_id=${id}`);
-        if (!enrollRes.ok) throw new Error("Gagal mengambil data siswa");
-        const enrollData = await enrollRes.json();
-        setStudents(enrollData.map(e => e.siswa_id));
+        // Untuk students, fetch dari API kelas students
+        const studentsRes = await fetchWithAuth(`/api/kelas/${id}/students`);
+        if (!studentsRes.ok) throw new Error("Gagal mengambil data siswa");
+        const studentsData = await studentsRes.json();
+        setStudents(studentsData);
       } catch (err) {
         setError(err.message);
       } finally {

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Kelas from '@/lib/models/Kelas';
-import Enrollment from '@/lib/models/Enrollment';
 import Orangtua from '@/lib/models/Orangtua';
 import { logCRUDAction } from '@/lib/auditLogger';
 import { authenticateAndAuthorize } from '@/lib/authMiddleware';
@@ -24,31 +23,19 @@ export async function GET(request) {
     if (guru_id) {
       filter.guru_id = guru_id;
     } else if (currentUser.role === 'siswa') {
-      // Ambil semua enrollment siswa dari koleksi Enrollment
-      const enrollments = await Enrollment.find({ siswa_id: currentUser.id }).select('kelas_id');
-      const kelasIds = enrollments.map(e => e.kelas_id).filter(Boolean);
-      if (kelasIds.length > 0) {
-        filter._id = { $in: kelasIds };
-      } else {
-        return NextResponse.json([]); // Siswa tidak terdaftar di kelas manapun
-      }
+      // Ambil semua kelas yang memiliki siswa_id ini di array siswa_ids
+      filter.siswa_ids = currentUser.id;
     } else if (currentUser.role === 'orangtua') {
       // Ambil semua anak dari koleksi Orangtua (menggunakan siswa_ids array)
-      const relasiAnak = await Orangtua.find({ user_id: currentUser.id }).select('siswa_ids');
-      const anakIds = relasiAnak.flatMap(r => r.siswa_ids || []);
+      const relasiOrangtua = await Orangtua.find({ user_id: currentUser.id }).select('siswa_ids');
+      const anakIds = relasiOrangtua.flatMap(r => r.siswa_ids || []);
       
       if (anakIds.length === 0) {
         return NextResponse.json([]); // Orangtua tidak memiliki anak yang terdaftar
       }
       
-      // Ambil semua enrollment anak-anak dari koleksi Enrollment
-      const enrollments = await Enrollment.find({ siswa_id: { $in: anakIds } }).select('kelas_id');
-      const kelasIds = enrollments.map(e => e.kelas_id).filter(Boolean);
-      if (kelasIds.length > 0) {
-        filter._id = { $in: kelasIds };
-      } else {
-        return NextResponse.json([]); // Anak-anak tidak terdaftar di kelas manapun
-      }
+      // Ambil semua kelas yang memiliki salah satu anak di array siswa_ids
+      filter.siswa_ids = { $in: anakIds };
     }
 
     const kelas = await Kelas.find(filter).populate('guru_id', 'nama email');
@@ -68,6 +55,10 @@ export async function POST(request) {
     userId = authResult.user.id || authResult.user._id;
     await connectDB();
     const body = await request.json();
+    // Set wali_kelas_id sama dengan guru_id jika belum diisi
+    if (body.guru_id && !body.wali_kelas_id) {
+      body.wali_kelas_id = body.guru_id;
+    }
     const kelas = await Kelas.create(body);
     await logCRUDAction(userId, 'CREATE_KELAS', 'KELAS', kelas._id, { nama: kelas.nama_kelas });
     return NextResponse.json(kelas, { status: 201 });

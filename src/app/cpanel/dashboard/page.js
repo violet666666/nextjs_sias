@@ -538,19 +538,22 @@ function MonitoringAnakById({ siswaId }) {
     }).finally(() => setLoading(false));
   }, [siswaId]);
 
-  // Fetch enrollment untuk siswaId
-  const [enrollments, setEnrollments] = useState([]);
+  // Fetch kelas untuk siswaId
+  const [kelasSiswaFiltered, setKelasSiswa] = useState([]);
   useEffect(() => {
-    fetchWithAuth("/api/enrollments")
+    if (!siswaId) {
+      setKelasSiswa([]);
+      return;
+    }
+    fetchWithAuth(`/api/kelas?siswa_id=${siswaId}`)
       .then((res) => res.json())
-      .then((all) => {
-        // Pastikan 'all' adalah array
-        setEnrollments(Array.isArray(all) ? all.filter((e) => e.siswa_id?._id === siswaId || e.siswa_id === siswaId) : []);
+      .then((data) => {
+        setKelasSiswa(Array.isArray(data) ? data : []);
       });
   }, [siswaId]);
-  const kelasIds = enrollments.map((e) => e.kelas_id?._id || e.kelas_id);
+  const kelasIds = kelasSiswaFiltered.map((k) => k._id);
   // Pastikan 'kelas' dan 'tugas' adalah array sebelum filter
-  const kelasSiswa = Array.isArray(kelas) ? kelas.filter((k) => kelasIds.includes(k._id)) : [];
+  const kelasSiswaFilteredFiltered = Array.isArray(kelas) ? kelas.filter((k) => kelasIds.includes(k._id)) : [];
   const tugasSiswa = Array.isArray(tugas) ? tugas.filter((t) => kelasIds.includes(t.kelas_id?._id || t.kelas_id)) : [];
 
   // Monitoring Kehadiran & Nilai
@@ -559,7 +562,7 @@ function MonitoringAnakById({ siswaId }) {
       <div className="text-lg mb-4">Daftar Kelas Anak</div>
       {loading ? (
         <div className="text-gray-600 dark:text-gray-400">Loading kelas...</div>
-      ) : kelasSiswa.length === 0 ? (
+      ) : kelasSiswaFiltered.length === 0 ? (
         <div className="text-gray-600 dark:text-gray-400">Tidak ada kelas yang diikuti anak ini.</div>
       ) : (
         <table className="min-w-full bg-white dark:bg-gray-800 rounded shadow mb-8 transition-colors duration-300">
@@ -571,7 +574,7 @@ function MonitoringAnakById({ siswaId }) {
             </tr>
           </thead>
           <tbody>
-            {kelasSiswa.map((k) => (
+            {kelasSiswaFiltered.map((k) => (
               <tr key={k._id}>
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{k.nama_kelas}</td>
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{k.tahun_ajaran}</td>
@@ -602,7 +605,7 @@ function MonitoringAnakById({ siswaId }) {
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{t.judul}</td>
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{t.deskripsi}</td>
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{new Date(t.tanggal_deadline).toLocaleString()}</td>
-                <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{kelasSiswa.find((k) => k._id === (t.kelas_id?._id || t.kelas_id))?.nama_kelas || '-'}</td>
+                <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{kelasSiswaFiltered.find((k) => k._id === (t.kelas_id?._id || t.kelas_id))?.nama_kelas || '-'}</td>
               </tr>
             ))}
           </tbody>
@@ -611,7 +614,7 @@ function MonitoringAnakById({ siswaId }) {
       <div className="text-lg mb-2 font-semibold">Monitoring Kehadiran</div>
       <KehadiranTable siswaId={siswaId} />
       <div className="text-lg mb-2 font-semibold mt-8">Monitoring Nilai</div>
-      <NilaiTable siswaId={siswaId} kelas={kelasSiswa} />
+      <NilaiTable siswaId={siswaId} kelas={kelasSiswaFilteredFiltered} />
     </div>
   );
 }
@@ -789,7 +792,7 @@ function SiswaDashboard({ user, kelas, tugas, loading }) {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
-  const [enrollments, setEnrollments] = useState([]);
+  const [kelasSiswaFilteredUser, setKelasSiswaUser] = useState([]);
   const [enrollLoading, setEnrollLoading] = useState(true);
 
   // Fetch submissions milik siswa ini
@@ -852,19 +855,18 @@ function SiswaDashboard({ user, kelas, tugas, loading }) {
 
   useEffect(() => {
     setEnrollLoading(true);
-    fetchWithAuth("/api/enrollments")
+    fetchWithAuth(`/api/kelas?siswa_id=${user.id}`)
       .then((res) => res.json())
-      .then((all) => {
-        // Pastikan 'all' adalah array
-        setEnrollments(Array.isArray(all) ? all.filter((e) => e.siswa_id?._id === user.id || e.siswa_id === user.id) : []);
+      .then((data) => {
+        setKelasSiswaUser(Array.isArray(data) ? data : []);
       })
       .finally(() => setEnrollLoading(false));
   }, [user.id]);
 
   // Kelas yang diikuti siswa
-  const kelasIds = enrollments.map((e) => e.kelas_id?._id || e.kelas_id);
+  const kelasIds = kelasSiswaFilteredUser.map((k) => k._id);
   // Pastikan 'kelas' adalah array sebelum filter
-  const kelasSiswa = Array.isArray(kelas) ? kelas.filter((k) => kelasIds.includes(k._id)) : [];
+  const kelasSiswaFiltered = Array.isArray(kelas) ? kelas.filter((k) => kelasIds.includes(k._id)) : [];
   // Tugas dari kelas yang diikuti siswa
   const tugasSiswa = tugas.filter((t) => kelasIds.includes(t.kelas_id?._id || t.kelas_id));
 
@@ -873,7 +875,7 @@ function SiswaDashboard({ user, kelas, tugas, loading }) {
       <div className="text-lg mb-4">Daftar Kelas</div>
       {enrollLoading ? (
         <div className="text-gray-600 dark:text-gray-400">Loading kelas...</div>
-      ) : kelasSiswa.length === 0 ? (
+      ) : kelasSiswaFiltered.length === 0 ? (
         <div className="text-gray-600 dark:text-gray-400">Tidak ada kelas yang diikuti.</div>
       ) : (
         <table className="min-w-full bg-white dark:bg-gray-800 rounded shadow mb-8 transition-colors duration-300">
@@ -885,7 +887,7 @@ function SiswaDashboard({ user, kelas, tugas, loading }) {
             </tr>
           </thead>
           <tbody>
-            {kelasSiswa.map((k) => (
+            {kelasSiswaFiltered.map((k) => (
               <tr key={k._id}>
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{k.nama_kelas}</td>
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{k.tahun_ajaran}</td>
@@ -921,7 +923,7 @@ function SiswaDashboard({ user, kelas, tugas, loading }) {
                   <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{t.judul}</td>
                   <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{t.deskripsi}</td>
                   <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{new Date(t.tanggal_deadline).toLocaleString()}</td>
-                  <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{kelasSiswa.find((k) => k._id === (t.kelas_id?._id || t.kelas_id))?.nama_kelas || '-'}</td>
+                  <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{kelasSiswaFiltered.find((k) => k._id === (t.kelas_id?._id || t.kelas_id))?.nama_kelas || '-'}</td>
                   <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
                     {sudah ? (
                       <span className="text-green-600 font-semibold">Sudah Dikumpulkan</span>

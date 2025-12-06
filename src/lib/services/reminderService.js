@@ -1,6 +1,6 @@
 import connectDB from '../db';
 import Tugas from '../models/Tugas';
-import Enrollment from '../models/Enrollment';
+import Kelas from '../models/Kelas';
 import Notification from '../models/Notification';
 import Orangtua from '../models/Orangtua';
 import User from '../models/userModel';
@@ -20,11 +20,13 @@ export async function sendAssignmentReminders() {
 
   for (const tugas of tugasList) {
     // Cari siswa yang terdaftar di kelas tugas tsb
-    const enrollments = await Enrollment.find({ kelas_id: tugas.kelas_id._id }).populate('siswa_id', 'nama email');
-    for (const enroll of enrollments) {
+    const kelas = await Kelas.findById(tugas.kelas_id._id).populate('siswa_ids', 'nama email');
+    if (!kelas || !kelas.siswa_ids) continue;
+    for (const siswa of kelas.siswa_ids) {
+      const siswaId = siswa._id || siswa;
       // Cek apakah siswa sudah dapat notifikasi untuk tugas ini (hindari duplikat)
       const existing = await Notification.findOne({
-        user_id: enroll.siswa_id._id,
+        user_id: siswaId,
         'metadata.tugas_id': tugas._id,
         type: 'task',
         category: 'academic',
@@ -33,7 +35,7 @@ export async function sendAssignmentReminders() {
       if (!existing) {
         // Kirim notifikasi ke siswa
         await Notification.create({
-          user_id: enroll.siswa_id._id,
+          user_id: siswaId,
           title: `Reminder: Deadline Tugas "${tugas.judul}"` ,
           message: `Tugas "${tugas.judul}" untuk kelas ${tugas.kelas_id.nama_kelas} akan berakhir pada ${new Date(tugas.tanggal_deadline).toLocaleString('id-ID')}. Segera kumpulkan sebelum deadline!`,
           type: 'task',
@@ -44,10 +46,10 @@ export async function sendAssignmentReminders() {
         });
       }
       // Cari orangtua dari siswa (jika ada)
-      const orangtuaLinks = await Orangtua.find({ siswa_ids: enroll.siswa_id._id });
+      const orangtuaLinks = await Orangtua.find({ siswa_ids: siswaId });
       for (const ortu of orangtuaLinks) {
         const existingOrtu = await Notification.findOne({
-          user_id: ortu._id,
+          user_id: ortu.user_id,
           'metadata.tugas_id': tugas._id,
           type: 'task',
           category: 'academic',
@@ -55,13 +57,13 @@ export async function sendAssignmentReminders() {
         });
         if (!existingOrtu) {
           await Notification.create({
-            user_id: ortu._id,
+            user_id: ortu.user_id,
             title: `Reminder: Deadline Tugas Anak "${tugas.judul}"` ,
             message: `Tugas "${tugas.judul}" untuk kelas ${tugas.kelas_id.nama_kelas} akan berakhir pada ${new Date(tugas.tanggal_deadline).toLocaleString('id-ID')}. Mohon pantau anak Anda untuk segera mengumpulkan tugas.`,
             type: 'task',
             priority: 'high',
             category: 'academic',
-            metadata: { tugas_id: tugas._id, kelas_id: tugas.kelas_id._id, deadline: tugas.tanggal_deadline, anak_id: enroll.siswa_id._id },
+            metadata: { tugas_id: tugas._id, kelas_id: tugas.kelas_id._id, deadline: tugas.tanggal_deadline, anak_id: siswaId },
             expiresAt: tugas.tanggal_deadline
           });
         }

@@ -4,7 +4,8 @@ import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import Toast from '../common/Toast';
 
 export default function ClassDetailOrangtua({ kelasId }) {
-  const { kelas, tasks, nilai, attendance, announcements, comments, loading } = useKelasDetail(kelasId);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { kelas, tasks, nilai, attendance, announcements, comments, loading } = useKelasDetail(kelasId, refreshKey);
   const [anakList, setAnakList] = useState([]);
   const [selectedAnakId, setSelectedAnakId] = useState(null);
   const [myNilai, setMyNilai] = useState([]);
@@ -164,83 +165,17 @@ export default function ClassDetailOrangtua({ kelasId }) {
             {announcements.map((a, i) => (
               <div key={a._id || i} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-100 dark:border-slate-700 flex flex-col gap-2">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="font-bold text-lg text-blue-700 dark:text-blue-300 truncate">{a.title || a.judul || 'Pengumuman'}</span>
-                  <span className="ml-auto text-xs text-gray-400">{a.createdAt ? new Date(a.createdAt).toLocaleDateString('id-ID') : ''}</span>
+                  <span className="font-bold text-lg text-blue-700 dark:text-blue-300 truncate">Pengumuman</span>
+                  <span className="ml-auto text-xs text-gray-400">{a.tanggal ? new Date(a.tanggal).toLocaleDateString('id-ID') : ''}</span>
                 </div>
-                <div className="text-sm text-gray-700 dark:text-gray-200 mb-2 line-clamp-3">{a.text || a.ringkasan || a.deskripsi || '-'}</div>
+                <div className="text-sm text-gray-700 dark:text-gray-200 mb-2 line-clamp-3">{a.deskripsi || '-'}</div>
                 <div className="flex items-center gap-2 mt-auto">
-                  <span className="text-xs text-gray-500">Oleh: {a.author?.nama || a.pembuat || '-'}</span>
+                  <span className="text-xs text-gray-500">Oleh: {a.author?.nama || '-'}</span>
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
-      <div className="mb-6">
-        <h3 className="font-semibold">Komentar</h3>
-        {loading ? (
-          <div className="text-center py-6"><span className="spinner"></span> Memuat komentar...</div>
-        ) : comments.length === 0 ? (
-          <div className="empty-state">
-            <svg className="mb-2 w-10 h-10 text-gray-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M17 8h2a2 2 0 012 2v8a2 2 0 01-2 2H7a2 2 0 01-2-2V10a2 2 0 012-2h2"/><path d="M15 3h6v6"/><path d="M10 14l2-2 4 4"/></svg>
-            <div>Belum ada komentar untuk kelas ini.</div>
-          </div>
-        ) : (
-          <div className="space-y-4 mb-4">
-            {comments.map((c, i) => (
-              <div key={c._id || i} className="flex items-start gap-3 bg-white dark:bg-gray-800 rounded-lg shadow p-3 border border-gray-100 dark:border-slate-700">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-bold text-lg">
-                  {c.author?.nama ? c.author.nama.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() : '?'}
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-gray-900 dark:text-gray-100">{c.author?.nama || 'Anonim'}</span>
-                    <span className="text-xs text-gray-400">{c.createdAt ? new Date(c.createdAt).toLocaleString('id-ID') : ''}</span>
-                  </div>
-                  <div className="text-gray-800 dark:text-gray-200 mt-1">{c.text || c.isi || '-'}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-        <form className="mt-4 flex gap-2" onSubmit={async e => {
-          e.preventDefault();
-          if (!user || !selectedAnakId) {
-            setToast({ message: 'User atau anak tidak valid.', type: 'error' });
-            return;
-          }
-          const input = e.target.elements['komentar'];
-          const text = input.value.trim();
-          if (!text) return;
-          input.disabled = true;
-          try {
-            const res = await fetchWithAuth(`/api/kelas/${kelasId}/comments`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ text, siswa_id: selectedAnakId })
-            });
-            if (!res.ok) {
-              const data = await res.json();
-              setToast({ message: data.error || 'Gagal mengirim komentar', type: 'error' });
-            } else {
-              input.value = '';
-              setToast({ message: 'Komentar berhasil dikirim!', type: 'success' });
-            }
-          } catch (err) {
-            setToast({ message: 'Terjadi kesalahan saat mengirim komentar', type: 'error' });
-          }
-          input.disabled = false;
-        }}>
-          <input
-            name="komentar"
-            className="flex-1 border rounded p-2"
-            placeholder="Tulis komentar..."
-            autoComplete="off"
-          />
-          <button type="submit" className="bg-blue-600 text-white px-4 py-1 rounded">
-            Kirim
-          </button>
-        </form>
       </div>
     </div>
   );

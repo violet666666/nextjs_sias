@@ -12,6 +12,7 @@ import { saveAs } from "file-saver";
 import { io } from "socket.io-client";
 import jsPDF from "jspdf";
 import Link from "next/link";
+import Swal from 'sweetalert2';
 import ClassDetailSiswa from '@/components/class-detail/ClassDetailSiswa';
 import ClassDetailGuru from '@/components/class-detail/ClassDetailGuru';
 import ClassDetailOrangtua from '@/components/class-detail/ClassDetailOrangtua';
@@ -56,17 +57,15 @@ export default function ClassDetailPage() {
   const [bulanFilter, setBulanFilter] = useState("");
   const [siswaFilter, setSiswaFilter] = useState("");
 
-  const [announcements, setAnnouncements] = useState([]);
   const [comments, setComments] = useState([]);
-  const [newAnnouncement, setNewAnnouncement] = useState("");
   const [newComment, setNewComment] = useState("");
+  const [newAnnouncement, setNewAnnouncement] = useState("");
 
   const [showBulkAddModal, setShowBulkAddModal] = useState(false);
   const [selectedBulkStudentIds, setSelectedBulkStudentIds] = useState([]);
   const [bulkAdding, setBulkAdding] = useState(false);
   const [bulkError, setBulkError] = useState("");
 
-  const [errorPengumuman, setErrorPengumuman] = useState("");
   const [errorKomentar, setErrorKomentar] = useState("");
 
   const jwtToken = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -79,13 +78,14 @@ export default function ClassDetailPage() {
     }
   }, []);
 
-  // Fungsi untuk mengambil detail kelas
+  // Fungsi untuk mengambil detail kelas (termasuk pengumuman)
   const fetchKelasDetails = async () => {
     try {
       const res = await fetchWithAuth(`/api/kelas/${id}`);
       if (!res.ok) throw new Error("Gagal mengambil detail kelas");
       const data = await res.json();
       setKelas(data);
+      // Pengumuman sudah termasuk dalam data kelas, tidak perlu state terpisah
     } catch (error) {
       console.error(error);
       setKelas(null);
@@ -95,10 +95,10 @@ export default function ClassDetailPage() {
   // Fungsi untuk mengambil siswa yang terdaftar di kelas
   const fetchEnrolledStudents = async () => {
     try {
-      const res = await fetchWithAuth(`/api/enrollments?kelas_id=${id}`);
-      if (!res.ok) throw new Error("Gagal mengambil data enrollment siswa");
-      const enrollments = await res.json();
-      setStudents(enrollments.map(e => ({ ...e.siswa_id, enrollmentId: e._id })));
+      const res = await fetchWithAuth(`/api/kelas/${id}/students`);
+      if (!res.ok) throw new Error("Gagal mengambil data siswa");
+      const studentsData = await res.json();
+      setStudents(studentsData);
     } catch (error) {
       console.error(error);
       setStudents([]);
@@ -256,9 +256,9 @@ export default function ClassDetailPage() {
     setIsSubmittingEnrollment(true);
     setEnrollmentError("");
     try {
-      const res = await fetchWithAuth("/api/enrollments", {
+      const res = await fetchWithAuth(`/api/kelas/${id}/students`, {
         method: "POST",
-        body: JSON.stringify({ kelas_id: id, siswa_id: selectedStudentIdForEnrollment }),
+        body: JSON.stringify({ siswa_id: selectedStudentIdForEnrollment }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -275,11 +275,23 @@ export default function ClassDetailPage() {
     }
   };
 
-  const handleRemoveStudent = async (enrollmentIdToRemove) => {
-    if (!confirm("Yakin ingin mengeluarkan siswa ini dari kelas?")) return;
+  const handleRemoveStudent = async (siswaIdToRemove) => {
+    const result = await Swal.fire({
+      title: 'Hapus Siswa?',
+      text: 'Apakah Anda yakin ingin mengeluarkan siswa ini dari kelas?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Ya, Hapus',
+      cancelButtonText: 'Batal'
+    });
+
+    if (!result.isConfirmed) return;
+
     setIsSubmittingEnrollment(true);
     try {
-      const res = await fetchWithAuth(`/api/enrollments/${enrollmentIdToRemove}`, { method: "DELETE" });
+      const res = await fetchWithAuth(`/api/kelas/${id}/students?siswa_id=${siswaIdToRemove}`, { method: "DELETE" });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Gagal mengeluarkan siswa");
@@ -287,7 +299,6 @@ export default function ClassDetailPage() {
       fetchEnrolledStudents(); // Refresh daftar siswa
       setToast({ message: 'Siswa berhasil dikeluarkan dari kelas', type: 'success' });
     } catch (error) {
-      alert(error.message);
       setToast({ message: error.message, type: 'error' });
     } finally {
       setIsSubmittingEnrollment(false);
@@ -450,37 +461,23 @@ export default function ClassDetailPage() {
     saveAs(blob, `data_kelas_${kelas.nama_kelas || kelas.namaKelas}.csv`);
   };
 
-  // Real-time socket.io dengan JWT
+  // Real-time socket.io dengan JWT (untuk komentar saja, pengumuman diambil dari kelas)
   useEffect(() => {
     const socket = io("http://localhost:3001", {
       auth: { token: jwtToken },
       transports: ["websocket"]
     });
     socket.emit("join_class", { classId: id, token: jwtToken });
-    socket.on("announcement_update", (data) => setAnnouncements(data));
     socket.on("comment_update", (data) => setComments(data));
     socket.on("connect_error", (err) => {
       // Fallback ke fetch API jika socket gagal
-      fetchWithAuth(`/api/kelas/${id}/announcements`).then(r => r.json()).then(setAnnouncements);
       fetchWithAuth(`/api/kelas/${id}/comments`).then(r => r.json()).then(setComments);
     });
     return () => { socket.disconnect(); };
   }, [id, jwtToken]);
 
-  // Perbaiki fetch pengumuman dan komentar agar selalu pakai JWT dan handle error
+  // Fetch komentar (pengumuman sudah diambil dari kelas via useKelasDetail)
   useEffect(() => {
-    const fetchAnnouncements = async () => {
-      setErrorPengumuman("");
-      try {
-        const res = await fetchWithAuth(`/api/kelas/${id}/announcements`);
-        if (!res.ok) throw new Error("Gagal mengambil pengumuman");
-        setAnnouncements(await res.json());
-      } catch (err) {
-        setErrorPengumuman(err.message);
-        setAnnouncements([]);
-      }
-    };
-    
     const fetchComments = async () => {
       setErrorKomentar("");
       try {
@@ -494,18 +491,33 @@ export default function ClassDetailPage() {
     };
     
     if (id && jwtToken) {
-      fetchAnnouncements();
       fetchComments();
     }
   }, [id, jwtToken]);
 
-  // Fungsi kirim pengumuman/komentar dengan JWT
-  const handleSendAnnouncement = () => {
-    if (!newAnnouncement.trim()) return;
-    const socket = io("http://localhost:3001", { auth: { token: jwtToken } });
-    socket.emit("new_announcement", { classId: id, text: newAnnouncement });
+  // Fungsi kirim pengumuman langsung ke kelas
+  const handleSendAnnouncement = async () => {
+    if (!newAnnouncement || !newAnnouncement.trim()) return;
+    try {
+      const res = await fetchWithAuth(`/api/kelas/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: 'add-announcement',
+          deskripsi: newAnnouncement.trim()
+        })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setToast({ message: data.error || 'Gagal menambah pengumuman', type: 'error' });
+      } else {
     setNewAnnouncement("");
-    socket.disconnect();
+        fetchKelasDetails(); // Refresh kelas untuk mendapatkan pengumuman terbaru
+        setToast({ message: 'Pengumuman berhasil ditambahkan', type: 'success' });
+      }
+    } catch (err) {
+      setToast({ message: 'Terjadi kesalahan saat menambah pengumuman', type: 'error' });
+    }
   };
   const handleSendComment = () => {
     if (!newComment.trim()) return;
@@ -583,9 +595,9 @@ export default function ClassDetailPage() {
     setBulkAdding(true);
     setBulkError("");
     try {
-      const res = await fetchWithAuth("/api/enrollments", {
+      const res = await fetchWithAuth(`/api/kelas/${id}/students`, {
         method: "POST",
-        body: JSON.stringify({ kelas_id: id, siswa_id: selectedBulkStudentIds }),
+        body: JSON.stringify({ siswa_id: selectedBulkStudentIds }),
       });
       if (!res.ok) {
         const data = await res.json();

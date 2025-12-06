@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import AttendanceSession from '@/lib/models/AttendanceSession';
-import Enrollment from '@/lib/models/Enrollment'; // Impor Enrollment
+import Kelas from '@/lib/models/Kelas';
 import Orangtua from '@/lib/models/Orangtua'; // Impor model relasi Orangtua
 import { authenticateAndAuthorize } from '@/lib/authMiddleware';
 
@@ -28,8 +28,8 @@ export async function GET(request,{params}) {
 
     // Validasi hak akses
     if (currentUser.role === 'siswa') {
-      const enrollment = await Enrollment.findOne({ kelas_id: session.kelas_id._id, siswa_id: currentUser.id });
-      if (!enrollment) {
+      const kelas = await Kelas.findById(session.kelas_id._id);
+      if (!kelas || !kelas.siswa_ids.some(id => id.toString() === currentUser.id)) {
         return NextResponse.json({ error: 'Akses ditolak: Anda tidak terdaftar di kelas dari sesi ini.' }, { status: 403 });
       }
     } else if (currentUser.role === 'guru' && session.guru_id._id.toString() !== currentUser.id) {
@@ -39,10 +39,15 @@ export async function GET(request,{params}) {
     } else if (currentUser.role === 'orangtua') {
       // Cari ID anak dari orang tua yang login
       const relasiAnak = await Orangtua.find({ user_id: currentUser.id }).select('siswa_ids');
-      const anakIds = relasiAnak.flatMap(r => r.siswa_ids || []);
+      const anakIds = relasiAnak.flatMap(r => r.siswa_ids || []).map(id => id.toString());
       // Cek apakah salah satu anak terdaftar di kelas dari sesi ini
-      const enrollmentAnak = await Enrollment.findOne({ kelas_id: session.kelas_id._id, siswa_id: { $in: anakIds } });
-      if (!enrollmentAnak) {
+      const kelas = await Kelas.findById(session.kelas_id._id);
+      if (!kelas) {
+        return NextResponse.json({ error: 'Kelas tidak ditemukan' }, { status: 404 });
+      }
+      const siswaIds = kelas.siswa_ids.map(id => id.toString());
+      const hasAnakInClass = siswaIds.some(id => anakIds.includes(id));
+      if (!hasAnakInClass) {
         return NextResponse.json({ error: 'Akses ditolak: Anak Anda tidak terdaftar di kelas dari sesi ini.' }, { status: 403 });
       }
     }

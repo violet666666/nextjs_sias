@@ -30,9 +30,9 @@ export default function RekapAbsensiPage() {
       setSiswaList([]);
       return;
     }
-    fetchWithAuth(`/api/enrollments?kelas_id=${kelasId}`)
+    fetchWithAuth(`/api/kelas/${kelasId}/students`)
       .then(res => res.json())
-      .then(data => setSiswaList(Array.isArray(data) ? data.map(e => e.siswa_id) : []));
+      .then(data => setSiswaList(Array.isArray(data) ? data : []));
   }, [kelasId]);
 
   // Fetch rekap absensi

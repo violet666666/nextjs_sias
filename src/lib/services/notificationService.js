@@ -1,5 +1,6 @@
 import Notification from '../models/Notification';
 import User from '../models/userModel';
+import Kelas from '../models/Kelas';
 import connectDB from '../db';
 import mongoose from 'mongoose';
 import { logCRUDAction } from '@/lib/auditLogger';
@@ -70,8 +71,9 @@ class NotificationService {
   static async createNotificationForClass(classId, notificationData) {
     await connectDB();
     // Ambil semua siswa yang terdaftar di kelas
-    const enrollments = await mongoose.model('Enrollment').find({ kelas_id: classId });
-    const userIds = enrollments.map(enrollment => enrollment.siswa_id);
+    const kelas = await Kelas.findById(classId);
+    if (!kelas || !kelas.siswa_ids) return [];
+    const userIds = kelas.siswa_ids.map(id => id.toString());
     return await this.createBatchNotifications(userIds, notificationData);
   }
 
@@ -79,8 +81,9 @@ class NotificationService {
   static async createNotificationForClassAndParents(classId, notificationData, parentNotificationData) {
     await connectDB();
     // Ambil semua siswa yang terdaftar di kelas
-    const enrollments = await mongoose.model('Enrollment').find({ kelas_id: classId });
-    const siswaIds = enrollments.map(enrollment => enrollment.siswa_id);
+    const kelas = await Kelas.findById(classId);
+    if (!kelas || !kelas.siswa_ids) return { siswaNotifs: [], ortuNotifs: [] };
+    const siswaIds = kelas.siswa_ids.map(id => id.toString());
     // Notifikasi ke siswa
     const siswaNotifs = await this.createBatchNotifications(siswaIds, notificationData);
     // Cari semua orangtua dari siswa-siswa tersebut

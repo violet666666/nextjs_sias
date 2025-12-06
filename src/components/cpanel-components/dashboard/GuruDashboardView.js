@@ -48,8 +48,11 @@ export default function GuruDashboardView({ user }) {
       try {
         const mapel = mapelList.find(m => m._id === activeMapel);
         if (!mapel) throw new Error("Mapel tidak ditemukan");
-        // Ambil kelas dari field kelas_id di mapel
-        const kelasRes = await fetchWithAuth(`/api/kelas?id=${mapel.kelas_id}`);
+        // Ambil kelas dari field kelas_ids di mapel (gunakan kelas pertama)
+        const kelasIds = mapel.kelas_ids || [];
+        if (kelasIds.length === 0) return null;
+        const kelasId = Array.isArray(kelasIds) ? (kelasIds[0]._id || kelasIds[0]) : kelasIds[0];
+        const kelasRes = await fetchWithAuth(`/api/kelas/${kelasId}`);
         if (!kelasRes.ok) throw new Error("Gagal mengambil data kelas");
         const kelasObj = await kelasRes.json();
         setKelasList(Array.isArray(kelasObj) ? kelasObj : [kelasObj]);
