@@ -18,7 +18,7 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Siswa tidak ditemukan.' }, { status: 404 });
     }
     // Cek relasi sudah ada (menggunakan siswa_ids array)
-    const Orangtua = (await import('@/lib/models/Orangtua')).default;
+    const Orangtua = (await import('@/lib/models/Orangtua.js')).default;
     const existingRelation = await Orangtua.findOne({ 
       user_id: authResult.user.id, 
       siswa_ids: siswa._id 

@@ -76,7 +76,7 @@ export async function POST(request, { params }) {
     });
     
     // Verifikasi bahwa User dengan ID tersebut ada
-    const User = (await import('@/lib/models/userModel')).default;
+    const User = (await import('@/lib/models/userModel.js')).default;
     const orangtuaUser = await User.findById(orangtuaObjectId);
     const siswaUser = await User.findById(siswaObjectId);
     

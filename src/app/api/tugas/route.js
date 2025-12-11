@@ -22,7 +22,7 @@ export async function GET(request) {
     const filter = {};
 
     if (currentUser.role === 'orangtua') {
-      const Orangtua = (await import('@/lib/models/Orangtua')).default;
+      const Orangtua = (await import('@/lib/models/Orangtua.js')).default;
       const anakList = await Orangtua.find({ user_id: currentUser.id });
       const anakIds = anakList.map(o => o.siswa_id);
       if (anakIds.length === 0) {

@@ -20,11 +20,11 @@ export async function GET(request) {
     let stats = {};
     const role = decoded.role;
     const userId = decoded.id || decoded.userId;
-    const User = (await import('@/lib/models/userModel')).default;
-    const Kelas = (await import('@/lib/models/Kelas')).default;
-    const Tugas = (await import('@/lib/models/Tugas')).default;
-    const Submission = (await import('@/lib/models/Submission')).default;
-    const Orangtua = (await import('@/lib/models/Orangtua')).default;
+    const User = (await import('@/lib/models/userModel.js')).default;
+    const Kelas = (await import('@/lib/models/Kelas.js')).default;
+    const Tugas = (await import('@/lib/models/Tugas.js')).default;
+    const Submission = (await import('@/lib/models/Submission.js')).default;
+    const Orangtua = (await import('@/lib/models/Orangtua.js')).default;
 
     if (role === 'admin') {
       stats.totalStudents = await User.countDocuments({ role: 'siswa' });

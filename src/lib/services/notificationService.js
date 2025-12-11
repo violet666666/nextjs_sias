@@ -87,7 +87,7 @@ class NotificationService {
     // Notifikasi ke siswa
     const siswaNotifs = await this.createBatchNotifications(siswaIds, notificationData);
     // Cari semua orangtua dari siswa-siswa tersebut
-    const Orangtua = (await import('../models/Orangtua')).default;
+    const Orangtua = (await import('../models/Orangtua.js')).default;
     const orangtuaDocs = await Orangtua.find({ siswa_ids: { $in: siswaIds } });
     const orangtuaIds = orangtuaDocs.map(o => o.user_id);
     // Notifikasi ke orangtua (jika ada parentNotificationData)

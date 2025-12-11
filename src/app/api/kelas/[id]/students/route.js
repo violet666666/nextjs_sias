@@ -5,7 +5,7 @@ import User from '@/lib/models/userModel';
 import Orangtua from '@/lib/models/Orangtua';
 import { authenticateAndAuthorize } from '@/lib/authMiddleware';
 import { logCRUDAction, logBulkAction } from '@/lib/auditLogger';
-import NotificationService from '@/lib/services/NotificationService';
+import NotificationService from '@/lib/services/notificationService';
 
 // GET: Ambil daftar siswa di kelas
 export async function GET(request, context) {
@@ -35,7 +35,7 @@ export async function GET(request, context) {
       
       // Jika bukan wali kelas, cek apakah guru mengajar mata pelajaran di kelas ini
       if (!isWaliKelas) {
-        const MataPelajaran = (await import('@/lib/models/MataPelajaran')).default;
+        const MataPelajaran = (await import('@/lib/models/MataPelajaran.js')).default;
         const mataPelajaranList = await MataPelajaran.find({
           kelas_ids: kelasId,
           $or: [
