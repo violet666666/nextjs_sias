@@ -215,17 +215,16 @@ export default function ParentChildDetailPage({ params }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {mapel.map(m => {
-                    const guruNames = m.guru_ids && Array.isArray(m.guru_ids) && m.guru_ids.length > 0
-                      ? m.guru_ids.map(g => g.nama || g).filter(Boolean).join(', ')
-                      : '-';
-                    return (
-                      <tr key={m._id}>
-                        <td className="py-2 px-4 font-medium">{m.nama}</td>
-                        <td className="py-2 px-4">{guruNames}</td>
-                      </tr>
-                    );
-                  })}
+                  {mapel.map(m => (
+                    <tr key={m._id}>
+                      <td className="py-2 px-4 font-medium">{m.nama}</td>
+                      <td className="py-2 px-4">
+                        {Array.isArray(m.guru_ids) && m.guru_ids.length
+                          ? m.guru_ids.map(g => g.nama || g).join(', ')
+                          : (m.guru_id?.nama || '-')}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

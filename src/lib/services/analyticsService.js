@@ -4,8 +4,9 @@ import Kelas from '../models/Kelas';
 import Tugas from '../models/Tugas';
 import Kehadiran from '../models/Kehadiran';
 import Submission from '../models/Submission';
-import MataPelajaran from '../models/MataPelajaran';
 import mongoose from 'mongoose';
+import Enrollment from '../models/Enrollment';
+import MataPelajaran from '../models/MataPelajaran';
 
 class AnalyticsService {
   // Dashboard Overview Statistics
@@ -39,7 +40,7 @@ class AnalyticsService {
     } else if (role === 'guru') {
       return {
         ...baseStats,
-        myClasses: await Kelas.countDocuments({ guru_id: userId }),
+        myClasses: await this.getTeacherClassCount(userId),
         myAssignments: await Tugas.countDocuments({ guru_id: userId }),
         myStudents: await this.getMyStudentsCount(userId),
         classPerformance: await this.getClassPerformance(userId),
@@ -279,21 +280,18 @@ class AnalyticsService {
 
   // Helper: Get unique Class IDs where teacher is involved (Homeroom OR Subject)
   static async getTeacherScope(guruId) {
-    // 1. Homeroom classes (where teacher is wali kelas)
+    // 1. Homeroom classes
     const homeroomClasses = await Kelas.find({ guru_id: guruId }).distinct('_id');
 
-    // 2. Subject classes (where teacher teaches a subject)
+    // 2. Subject classes
     const subjectClasses = await MataPelajaran.find({
       $or: [{ guru_id: guruId }, { guru_ids: guruId }]
     }).distinct('kelas_id');
 
     // Combine and unique
-    const allClassIds = [...new Set([
-      ...homeroomClasses.map(id => id.toString()),
-      ...subjectClasses.map(id => id?.toString()).filter(Boolean)
-    ])];
+    const allClassIds = [...new Set([...homeroomClasses.map(id => id.toString()), ...subjectClasses.map(id => id.toString())])];
 
-    // Get Subject IDs for this teacher
+    // Get Subject IDs for this teacher (to filter data later)
     const mySubjectIds = await MataPelajaran.find({
       $or: [{ guru_id: guruId }, { guru_ids: guruId }]
     }).distinct('_id');
@@ -301,93 +299,79 @@ class AnalyticsService {
     return { classIds: allClassIds, subjectIds: mySubjectIds };
   }
 
-  // Get students at risk (low grades or high absence)
-  static async getAtRiskStudents(guruId) {
-    const { subjectIds, classIds } = await this.getTeacherScope(guruId);
-
-    const riskMap = new Map();
-
-    // 1. Low Grades (nilai < 75)
-    const tugasIds = await Tugas.find({
-      $or: [
-        { mata_pelajaran_id: { $in: subjectIds } },
-        { kelas_id: { $in: classIds } }
-      ]
-    }).distinct('_id');
-
-    const lowGrades = await Submission.find({
-      tugas_id: { $in: tugasIds },
-      nilai: { $lt: 75, $gt: 0 }
-    }).populate('siswa_id', 'nama email').limit(20);
-
-    lowGrades.forEach(g => {
-      if (!g.siswa_id) return;
-      const sid = g.siswa_id._id.toString();
-      if (!riskMap.has(sid)) {
-        riskMap.set(sid, { id: sid, nama: g.siswa_id.nama, issues: [] });
-      }
-      riskMap.get(sid).issues.push(`Nilai rendah: ${g.nilai}`);
-    });
-
-    // 2. High Absence (Alfa >= 2)
-    const badAttendance = await Kehadiran.aggregate([
-      { $match: { kelas_id: { $in: classIds.map(id => new mongoose.Types.ObjectId(id)) }, status: 'Alfa' } },
-      { $group: { _id: '$siswa_id', count: { $sum: 1 } } },
-      { $match: { count: { $gte: 2 } } }
-    ]);
-
-    await User.populate(badAttendance, { path: '_id', select: 'nama' });
-    badAttendance.forEach(a => {
-      if (!a._id) return;
-      const sid = a._id._id?.toString() || a._id.toString();
-      if (!riskMap.has(sid)) {
-        riskMap.set(sid, { id: sid, nama: a._id.nama || 'Unknown', issues: [] });
-      }
-      riskMap.get(sid).issues.push(`Alfa ${a.count} kali`);
-    });
-
-    return Array.from(riskMap.values()).slice(0, 5);
+  static async getTeacherClassCount(guruId) {
+    const { classIds } = await this.getTeacherScope(guruId);
+    return classIds.length;
   }
 
   static async getMyStudentsCount(guruId) {
-    const myClasses = await Kelas.find({ guru_id: guruId }).select('_id');
-    const classIds = myClasses.map(k => k._id);
-
-    // Count students enrolled in my classes
-    const kelasList = await Kelas.find({ _id: { $in: classIds } });
-    return kelasList.reduce((total, k) => total + (k.siswa_ids?.length || 0), 0);
+    const { classIds } = await this.getTeacherScope(guruId);
+    return await Enrollment.countDocuments({ kelas_id: { $in: classIds } });
   }
 
   static async getClassPerformance(guruId) {
-    const myClasses = await Kelas.find({ guru_id: guruId }).select('_id nama_kelas');
+    // Get all subjects taught by this teacher
+    const mySubjects = await MataPelajaran.find({
+      $or: [{ guru_id: guruId }, { guru_ids: guruId }]
+    }).populate('kelas_id', 'nama_kelas');
 
-    const performance = await Promise.all(myClasses.map(async (kelas) => {
-      const grades = await Submission.find({ kelas_id: kelas._id });
+    // Group by Class, but calculated specific to the Subject
+    const performanceMap = new Map();
 
-      const average = grades.length > 0
-        ? grades.reduce((sum, grade) => sum + grade.nilai, 0) / grades.length
+    for (const mapel of mySubjects) {
+      if (!mapel.kelas_id) continue;
+
+      const className = mapel.kelas_id.nama_kelas;
+      // Fetch grades ONLY for this subject
+      const grades = await Submission.find({
+        tugas_id: { $in: await Tugas.find({ mata_pelajaran_id: mapel._id }).distinct('_id') },
+        nilai: { $exists: true }
+      });
+
+      const avg = grades.length > 0
+        ? grades.reduce((sum, g) => sum + g.nilai, 0) / grades.length
         : 0;
 
-      return {
-        kelas: kelas.nama_kelas,
-        averageGrade: Math.round(average * 100) / 100,
-        totalStudents: grades.length
-      };
-    }));
+      // If class already exists (e.g. teacher teaches 2 subjects in same class), average them
+      if (performanceMap.has(className)) {
+        const existing = performanceMap.get(className);
+        existing.totalAvg += avg;
+        existing.count += 1;
+        existing.studentCount = Math.max(existing.studentCount, grades.length); // Approximation
+        performanceMap.set(className, existing);
+      } else {
+        performanceMap.set(className, {
+          kelas: className,
+          totalAvg: avg,
+          count: 1,
+          studentCount: grades.length // This is strictly # of graded submissions, roughly active students
+        });
+      }
+    }
 
-    return performance;
+    return Array.from(performanceMap.values()).map(item => ({
+      kelas: item.kelas,
+      averageGrade: Math.round((item.totalAvg / item.count) * 100) / 100,
+      totalStudents: item.studentCount // Contextual: Active students in this subject
+    }));
   }
 
   static async getAssignmentCompletion(guruId) {
-    const myAssignments = await Tugas.find({ guru_id: guruId }).select('_id judul kelas_id');
+    // Only assignments created by this teacher
+    const myAssignments = await Tugas.find({ guru_id: guruId })
+      .sort({ createdAt: -1 })
+      .limit(5) // Limit to 5 recent assignments
+      .select('_id judul kelas_id');
 
     const completion = await Promise.all(myAssignments.map(async (tugas) => {
       const submissions = await Submission.find({ tugas_id: tugas._id });
+      // Total expected can be fetched from Enrollment if we want precision, 
+      // but strictly counting submissions is faster for overview
 
       return {
         tugas: tugas.judul,
         totalSubmissions: submissions.length,
-        completed: submissions.filter(s => s.status === 'completed').length
+        completed: submissions.filter(s => s.nilai !== undefined).length // 'graded' effectively
       };
     }));
 
@@ -395,34 +379,85 @@ class AnalyticsService {
   }
 
   static async getAttendanceRate(guruId) {
-    const myClasses = await Kelas.find({ guru_id: guruId }).select('_id nama_kelas');
+    // Attendance based on the Teacher's Subjects
+    const { subjectIds } = await this.getTeacherScope(guruId);
 
-    const attendance = await Promise.all(myClasses.map(async (kelas) => {
-      const sessions = await Kehadiran.distinct('session_id', { kelas_id: kelas._id });
-      const totalAttendance = await Kehadiran.countDocuments({ kelas_id: kelas._id });
-      const presentAttendance = await Kehadiran.countDocuments({
-        kelas_id: kelas._id,
-        status: 'Hadir'
-      });
+    // Find attendance records linked to these subjects
+    // Note: Kehadiran model usually links to mapel_id. 
+    // If Kehadiran is per-day (homeroom), this might differ. 
+    // Assuming Kehadiran has mapel_id based on previous audit.
+    // Yes, audit confirmed: Kehadiran has mapel_id.
 
-      return {
-        kelas: kelas.nama_kelas,
-        totalSessions: sessions.length,
-        attendanceRate: sessions.length > 0 ? (presentAttendance / totalAttendance * 100).toFixed(2) : 0
-      };
-    }));
+    const attendances = await Kehadiran.find({ mapel_id: { $in: subjectIds } });
 
-    return attendance;
+    if (attendances.length === 0) return 0;
+
+    const present = attendances.filter(a => a.status === 'Hadir').length;
+    return (present / attendances.length * 100).toFixed(2);
+  }
+
+  static async getAtRiskStudents(guruId) {
+    // Identify students with low grades (< 70) or high absence in teacher's subjects
+    const { subjectIds } = await this.getTeacherScope(guruId);
+
+    // 1. Low Grades
+    const lowGrades = await Submission.find({
+      tugas_id: { $in: await Tugas.find({ mata_pelajaran_id: { $in: subjectIds } }).distinct('_id') },
+      nilai: { $lt: 75 } // KKM Assumption
+    }).populate('siswa_id', 'nama email').limit(10);
+
+    // Aggregate by student
+    const riskMap = new Map();
+
+    lowGrades.forEach(g => {
+      if (!g.siswa_id) return;
+      const sid = g.siswa_id._id.toString();
+      if (!riskMap.has(sid)) {
+        riskMap.set(sid, {
+          id: sid,
+          nama: g.siswa_id.nama,
+          issues: []
+        });
+      }
+      riskMap.get(sid).issues.push(`Nilai rendah di ${g.tugas_id?.judul || 'Tugas'}: ${g.nilai}`);
+    });
+
+    // 2. High Absence (Alpha > 2 in this subject)
+    // Complex query, simplified for dashboard speed:
+    // Just return the grade-based risks for now, or fetch distinct students with > 2 alphas
+    const badAttendance = await Kehadiran.aggregate([
+      { $match: { mapel_id: { $in: subjectIds }, status: 'Alfa' } },
+      { $group: { _id: '$siswa_id', count: { $sum: 1 } } },
+      { $match: { count: { $gte: 2 } } }
+    ]);
+
+    // Populate names for bad attendance
+    await User.populate(badAttendance, { path: '_id', select: 'nama' });
+
+    badAttendance.forEach(a => {
+      if (!a._id) return;
+      const sid = a._id._id.toString();
+      if (!riskMap.has(sid)) {
+        riskMap.set(sid, {
+          id: sid,
+          nama: a._id.nama,
+          issues: []
+        });
+      }
+      riskMap.get(sid).issues.push(`Alfa ${a.count} kali`);
+    });
+
+    return Array.from(riskMap.values()).slice(0, 5); // Return top 5
   }
 
   // Student-specific methods
   static async getMyClassesCount(siswaId) {
-    return await Kelas.countDocuments({ siswa_ids: siswaId });
+    return await Enrollment.countDocuments({ siswa_id: siswaId });
   }
 
   static async getMyAssignmentsCount(siswaId) {
-    const myClasses = await Kelas.find({ siswa_ids: siswaId }).select('_id');
-    const classIds = myClasses.map(k => k._id);
+    const myClasses = await Enrollment.find({ siswa_id: siswaId }).select('kelas_id');
+    const classIds = myClasses.map(e => e.kelas_id);
 
     return await Tugas.countDocuments({ kelas_id: { $in: classIds } });
   }
@@ -458,8 +493,8 @@ class AnalyticsService {
   }
 
   static async getUpcomingDeadlines(siswaId, limit = 5) {
-    const myClasses = await Kelas.find({ siswa_ids: siswaId }).select('_id');
-    const classIds = myClasses.map(k => k._id);
+    const myClasses = await Enrollment.find({ siswa_id: siswaId }).select('kelas_id');
+    const classIds = myClasses.map(e => e.kelas_id);
 
     const now = new Date();
     const upcoming = await Tugas.find({
@@ -526,6 +561,7 @@ class AnalyticsService {
 
     if (!orangtua || !orangtua.siswa_ids || orangtua.siswa_ids.length === 0) return [];
 
+    // Get recent grades for children
     const recentGrades = await Submission.find({ siswa_id: { $in: orangtua.siswa_ids } })
       .sort({ updatedAt: -1 })
       .limit(limit)
@@ -538,9 +574,7 @@ class AnalyticsService {
       description: `${g.siswa_id?.nama || 'Anak'} mendapat nilai ${g.nilai} di ${g.tugas_id?.judul || 'Tugas'}`,
       timestamp: g.updatedAt
     }));
-  }
-
-  // Export data for reports
+  }  // Export data for reports
   static async exportData(type, filters = {}) {
     await connectDB();
 

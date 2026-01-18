@@ -5,6 +5,7 @@ import { authenticateAndAuthorize } from '@/lib/authMiddleware';
 import NotificationService from '@/lib/services/notificationService';
 import DiscussionThread from '@/lib/models/DiscussionThread';
 import Kelas from '@/lib/models/Kelas';
+import Enrollment from '@/lib/models/Enrollment';
 import validator from 'validator';
 
 // GET: List komentar per thread
@@ -45,8 +46,9 @@ export async function POST(request) {
 
     // Notifikasi otomatis ke semua siswa & guru di kelas (kecuali author komentar)
     const thread = await DiscussionThread.findById(thread_id);
-    const kelas = await Kelas.findById(thread.kelas_id).populate('siswa_ids');
-    const siswaIds = kelas.siswa_ids.map(s => (s._id || s).toString());
+    const kelas = await Kelas.findById(thread.kelas_id);
+    const enrollments = await Enrollment.find({ kelas_id: thread.kelas_id });
+    const siswaIds = enrollments.map(e => e.siswa_id.toString());
     const guruId = kelas.guru_id.toString();
     const targetUserIds = [...siswaIds, guruId].filter(id => id !== user.id.toString());
     if (targetUserIds.length > 0) {

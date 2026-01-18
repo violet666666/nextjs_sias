@@ -1,36 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
-export default function TaskModal({ kelasId, onSuccess, onClose, initialData, mapelId = null }) {
+export default function TaskModal({ kelasId, onSuccess, onClose, initialData }) {
   const [judul, setJudul] = useState(initialData?.judul || '');
   const [deskripsi, setDeskripsi] = useState(initialData?.deskripsi || '');
   const [tanggal_deadline, setTanggalDeadline] = useState(initialData?.tanggal_deadline ? initialData.tanggal_deadline.slice(0, 16) : '');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [mapelList, setMapelList] = useState([]);
-  const [selectedMapel, setSelectedMapel] = useState(mapelId || initialData?.mapel_id || initialData?.matapelajaran_id || '');
+  const [selectedMapel, setSelectedMapel] = useState(initialData?.matapelajaran_id || '');
   const modalRef = useRef();
 
   useEffect(() => {
     async function fetchMapel() {
       try {
-        // Jika mapelId sudah diberikan, langsung set
-        if (mapelId) {
-          setSelectedMapel(mapelId);
-          // Fetch detail mata pelajaran untuk display
-          const res = await fetchWithAuth(`/api/subjects/${mapelId}`);
-          if (res.ok) {
-            const data = await res.json();
-            setMapelList([data]);
-          }
-          return;
-        }
-        // Jika tidak, fetch semua mata pelajaran di kelas
         const kelasRes = await fetchWithAuth(`/api/kelas/${kelasId}`);
         if (!kelasRes.ok) return;
         const kelas = await kelasRes.json();
         if (kelas?.matapelajaran_ids?.length) {
-          const res = await fetchWithAuth(`/api/subjects?ids=${kelas.matapelajaran_ids.map(id => typeof id === 'object' ? id._id : id).join(',')}`);
+          const res = await fetchWithAuth(`/api/subjects?ids=${kelas.matapelajaran_ids.join(',')}`);
           if (!res.ok) return;
           const data = await res.json();
           setMapelList(Array.isArray(data) ? data : []);
@@ -40,7 +28,7 @@ export default function TaskModal({ kelasId, onSuccess, onClose, initialData, ma
       } catch {}
     }
     fetchMapel();
-  }, [kelasId, mapelId]);
+  }, [kelasId]);
 
   // Close modal on ESC
   useEffect(() => {
@@ -80,7 +68,7 @@ export default function TaskModal({ kelasId, onSuccess, onClose, initialData, ma
         judul,
         deskripsi,
         tanggal_deadline: tanggal_deadline ? new Date(tanggal_deadline).toISOString() : null,
-        mapel_id: selectedMapel || mapelId,
+        matapelajaran_id: selectedMapel,
       };
       const res = await fetchWithAuth(isEdit ? `/api/tugas/${initialData._id}` : '/api/tugas', {
         method: isEdit ? 'PUT' : 'POST',
@@ -124,29 +112,23 @@ export default function TaskModal({ kelasId, onSuccess, onClose, initialData, ma
             onChange={e => setDeskripsi(e.target.value)}
             disabled={submitting}
           />
-          {mapelId ? (
-            <div className="w-full border rounded p-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
-              {mapelList[0]?.nama || 'Mata Pelajaran'}
-            </div>
-          ) : (
-            <select
-              className="w-full border rounded p-2 dark:bg-gray-700 dark:text-white"
-              value={selectedMapel}
-              onChange={e => setSelectedMapel(e.target.value)}
-              disabled={submitting || mapelList.length === 0}
-              required
-            >
-              <option value="">Pilih Mata Pelajaran</option>
-              {mapelList.map(m => {
-                const guruNames = m.guru_ids && Array.isArray(m.guru_ids) && m.guru_ids.length > 0
-                  ? m.guru_ids.map(g => (typeof g === 'object' ? g.nama : g) || g).filter(Boolean).join(', ')
-                  : '-';
-                return (
-                  <option key={m._id} value={m._id}>{m.nama} ({guruNames})</option>
-                );
-              })}
-            </select>
-          )}
+          <select
+            className="w-full border rounded p-2 dark:bg-gray-700 dark:text-white"
+            value={selectedMapel}
+            onChange={e => setSelectedMapel(e.target.value)}
+            disabled={submitting || mapelList.length === 0}
+            required
+          >
+            <option value="">Pilih Mata Pelajaran</option>
+            {mapelList.map(m => {
+              const guruNames = Array.isArray(m.guru_ids) && m.guru_ids.length
+                ? m.guru_ids.map(g => g.nama || g).join(', ')
+                : (m.guru_id?.nama || '-');
+              return (
+                <option key={m._id} value={m._id}>{m.nama} ({guruNames})</option>
+              );
+            })}
+          </select>
           <input
             type="datetime-local"
             className="w-full border rounded p-2 dark:bg-gray-700 dark:text-white"

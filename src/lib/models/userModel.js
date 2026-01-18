@@ -17,7 +17,6 @@ const UserSchema = new mongoose.Schema(
     tempat_lahir: { type: String },
     tanggal_lahir: { type: Date },
     // Field khusus siswa
-    nis: { type: String, unique: true, sparse: true }, // NIS (Nomor Induk Siswa) - unique untuk siswa
     nisn: { type: String },
     nama_ortu: { type: String },
     kelas_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Kelas' }, // Siswa hanya satu kelas

@@ -18,29 +18,26 @@ export async function GET(request) {
     const ids = searchParams.get('ids');
     let subjects;
     if (ids) {
-      // Ambil banyak mapel sekaligus
       const idsArr = ids.split(',').map(id => id.trim());
       subjects = await MataPelajaran.find({ _id: { $in: idsArr } })
         .populate('guru_ids', 'nama email')
-        .populate('kelas_ids', 'nama_kelas');
+        .populate('kelas_id', 'nama_kelas tahun_ajaran');
     } else if (kelas_id) {
-      // Filter berdasarkan kelas_ids array
-      subjects = await MataPelajaran.find({
-        kelas_ids: kelas_id
-      })
+      subjects = await MataPelajaran.find({ kelas_id })
         .populate('guru_ids', 'nama email')
-        .populate('kelas_ids', 'nama_kelas');
+        .populate('kelas_id', 'nama_kelas tahun_ajaran');
     } else if (guru_id) {
-      // Filter berdasarkan guru_ids array
       subjects = await MataPelajaran.find({
-        guru_ids: guru_id
-      })
-        .populate('guru_ids', 'nama email')
-        .populate('kelas_ids', 'nama_kelas');
+        $or: [
+          { guru_id: guru_id },
+          { guru_ids: guru_id }
+        ]
+      }).populate('guru_ids', 'nama email')
+        .populate('kelas_id', 'nama_kelas tahun_ajaran');
     } else {
       subjects = await MataPelajaran.find()
         .populate('guru_ids', 'nama email')
-        .populate('kelas_ids', 'nama_kelas');
+        .populate('kelas_id', 'nama_kelas tahun_ajaran');
     }
     return NextResponse.json(subjects);
   } catch (error) {
@@ -58,35 +55,35 @@ export async function POST(request) {
     userId = authResult.user.id || authResult.user._id;
     await connectDB();
     const body = await request.json();
-    const { nama, kode, deskripsi, total_jam_per_minggu, kelas_ids, guru_ids } = body;
-    
-    // Hanya nama yang wajib diisi, kelas dan guru bisa ditambahkan nanti
-    if (!nama || !nama.trim()) {
-      return NextResponse.json({ error: 'Nama mata pelajaran wajib diisi.' }, { status: 400 });
+    const { nama, kode, deskripsi, kelas_id } = body;
+    if (!nama || !kelas_id) {
+      return NextResponse.json({ error: 'Nama dan kelas wajib diisi.' }, { status: 400 });
     }
-    
-    // Normalize to array format
-    const finalKelasIds = Array.isArray(kelas_ids) ? kelas_ids : (kelas_ids ? [kelas_ids] : []);
-    const finalGuruIds = Array.isArray(guru_ids) ? guru_ids : (guru_ids ? [guru_ids] : []);
-    
-    const subject = await MataPelajaran.create({ 
-      nama: nama.trim(), 
-      kode: kode?.trim() || undefined, 
-      deskripsi: deskripsi?.trim() || undefined,
-      total_jam_per_minggu: total_jam_per_minggu ? parseInt(total_jam_per_minggu) || 0 : 0,
-      kelas_ids: finalKelasIds,
-      guru_ids: finalGuruIds
+    const guru_ids = normalizeGuruIds(body);
+    const subject = await MataPelajaran.create({
+      nama,
+      kode,
+      deskripsi,
+      kelas_id,
+      guru_ids,
+      guru_id: guru_ids[0] || null
     });
-    
-    // Update all classes to include this subject (jika ada kelas yang dipilih)
-    for (const kId of finalKelasIds) {
-      await Kelas.findByIdAndUpdate(kId, { $addToSet: { matapelajaran_ids: subject._id } });
-    }
-    
+    await Kelas.findByIdAndUpdate(kelas_id, { $addToSet: { matapelajaran_ids: subject._id } });
     await logCRUDAction(userId, 'CREATE_MAPEL', 'TUGAS', subject._id, { nama });
-    return NextResponse.json(subject, { status: 201 });
+    const populated = await subject.populate('guru_ids', 'nama email');
+    return NextResponse.json(populated, { status: 201 });
   } catch (error) {
     if (userId) await logCRUDAction(userId, 'CREATE_MAPEL', 'TUGAS', null, { error: error.message }, 'FAILED', error.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 } 
+
+function normalizeGuruIds(payload) {
+  if (Array.isArray(payload.guru_ids) && payload.guru_ids.length) {
+    return payload.guru_ids.filter(Boolean);
+  }
+  if (payload.guru_id) {
+    return [payload.guru_id];
+  }
+  return [];
+}

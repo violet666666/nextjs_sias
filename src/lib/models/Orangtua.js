@@ -2,11 +2,7 @@ import mongoose from "mongoose";
 
 const OrangtuaSchema = new mongoose.Schema({
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  siswa_ids: [{ 
-    type: mongoose.Schema.Types.ObjectId, 
-    ref: "User", 
-    required: true 
-  }], // Array untuk multiple children
+  siswa_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   nomor_telepon: { type: String },
   alamat: { type: String },
   pekerjaan: { type: String },

@@ -39,7 +39,12 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, ChartTooltip, Ch
 export default function AnalyticsPage() {
   const router = useRouter();
   const [user, setUser] = useState(null);
-  const [analytics, setAnalytics] = useState({});
+  const [analytics, setAnalytics] = useState({
+    overview: {},
+    attendance: {},
+    grades: {},
+    activity: {}
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [toast, setToast] = useState({ message: "", type: "success" });
@@ -91,26 +96,23 @@ export default function AnalyticsPage() {
     return () => socket.off('activity_feed_update', handler);
   }, [socket]);
 
-  const fetchAnalytics = async (userData, range) => {
+  const fetchAnalytics = async (_, range) => {
     setLoading(true);
     setError("");
     try {
-      const [overviewRes, attendanceRes, gradesRes, activityRes] = await Promise.all([
-        fetchWithAuth(`/api/analytics/overview?range=${range}`),
-        fetchWithAuth(`/api/analytics/attendance?range=${range}`),
-        fetchWithAuth(`/api/analytics/grades?range=${range}`),
-        fetchWithAuth(`/api/analytics/activity?range=${range}`)
-      ]);
-
-      const analyticsData = {
-        overview: overviewRes.ok ? await overviewRes.json() : {},
-        attendance: attendanceRes.ok ? await attendanceRes.json() : {},
-        grades: gradesRes.ok ? await gradesRes.json() : {},
-        activity: activityRes.ok ? await activityRes.json() : {}
-      };
-
-      setAnalytics(analyticsData);
+      const response = await fetchWithAuth(`/api/analytics/overview?range=${range}`);
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      const data = await response.json();
+      setAnalytics({
+        overview: data.overview || {},
+        attendance: data.attendance || {},
+        grades: data.grades || {},
+        activity: data.activity || {}
+      });
     } catch (err) {
+      console.error(err);
       setError("Gagal memuat data analytics");
       setToast({ message: "Gagal memuat data analytics", type: "error" });
     } finally {

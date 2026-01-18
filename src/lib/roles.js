@@ -29,22 +29,19 @@ export const ROUTE_PERMISSIONS = {
   
   // Teacher and Admin routes
   '/cpanel/classes': ['admin', 'guru'],
-  '/cpanel/my-subjects': ['guru'],
   '/cpanel/task-management': ['admin', 'guru'],
   '/cpanel/attendance-management': ['admin', 'guru'],
   '/cpanel/grades': ['admin', 'guru'],
   '/cpanel/bulletin-management': ['admin', 'guru'],
   
   // Student routes
-  '/cpanel/tasks': ['siswa', 'admin'],
-  '/cpanel/task': ['admin', 'guru'], // Admin and teacher can access task management
+  '/cpanel/tasks': ['siswa'],
   '/cpanel/attendance': ['siswa'],
   '/cpanel/grades': ['siswa'],
   
   // Parent routes
-  '/cpanel/orangtua-link': ['admin'], // Hanya admin yang bisa manage relasi
-  '/cpanel/children': ['orangtua'], // Orangtua bisa akses halaman anak saya
-  // '/cpanel/monitoring': ['orangtua'], // Dihapus - data tidak sinkron
+  '/cpanel/orangtua-link': ['orangtua'],
+  '/cpanel/monitoring': ['orangtua'],
   
   // Common routes (all authenticated users)
   '/cpanel/profile': ['admin', 'guru', 'siswa', 'orangtua'],

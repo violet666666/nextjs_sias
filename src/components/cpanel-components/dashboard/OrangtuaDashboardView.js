@@ -92,11 +92,6 @@ export default function OrangtuaDashboardView({ user }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [activeMapel, setActiveMapel] = useState(null);
-  // Request relasi state
-  const [showRequestForm, setShowRequestForm] = useState(false);
-  const [requestStatus, setRequestStatus] = useState(null);
-  const [requestLoading, setRequestLoading] = useState(false);
-  const [nisInput, setNisInput] = useState("");
 
   useEffect(() => {
     if (!user || user.role !== "orangtua") return;
@@ -112,66 +107,11 @@ export default function OrangtuaDashboardView({ user }) {
         setAnakList(listAnak);
         if (listAnak.length > 0) {
           setSelectedAnak(listAnak[0]);
-        } else {
-          // Jika belum ada anak, cek status request
-          fetchRequestStatus();
         }
       })
       .catch(err => setError(err.message))
       .finally(() => setLoading(false));
   }, [user]);
-
-  const fetchRequestStatus = async () => {
-    try {
-      const res = await fetchWithAuth('/api/orangtua/request');
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.requests && Array.isArray(data.requests) && data.requests.length > 0) {
-          // Cari request dengan status pending, approved, atau rejected
-          const pendingReq = data.requests.find(r => r.status === 'pending');
-          const approvedReq = data.requests.find(r => r.status === 'approved');
-          const rejectedReq = data.requests.find(r => r.status === 'rejected');
-          
-          if (pendingReq) setRequestStatus('pending');
-          else if (approvedReq) setRequestStatus('approved');
-          else if (rejectedReq) setRequestStatus('rejected');
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching request status:', err);
-    }
-  };
-
-  const handleRequest = async (e) => {
-    e.preventDefault();
-    if (!nisInput.trim()) {
-      setError("NIS anak wajib diisi");
-      return;
-    }
-    setRequestLoading(true);
-    setError("");
-    setRequestStatus(null);
-    try {
-      const res = await fetchWithAuth('/api/orangtua/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ siswa_nis: nisInput.trim() })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setRequestStatus('pending');
-        setShowRequestForm(false);
-        setNisInput("");
-        setError("");
-      } else {
-        setError(data.error || 'Gagal mengajukan request.');
-      }
-    } catch (e) {
-      setError('Gagal mengajukan request.');
-    } finally {
-      setRequestLoading(false);
-    }
-  };
 
   useEffect(() => {
     if (!selectedAnak) return;
@@ -213,96 +153,7 @@ export default function OrangtuaDashboardView({ user }) {
     <div className="text-black space-y-6">
       <h2 className="text-2xl font-bold">Monitoring Akademik Anak</h2>
       {anakList.length === 0 ? (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-          <p className="text-gray-600 dark:text-gray-400 mb-4">Belum ada anak yang terhubung dengan akun Anda.</p>
-          
-          {/* Request Status */}
-          {requestStatus === 'pending' ? (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 mb-4">
-              <div className="flex items-center gap-2">
-                <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p className="text-yellow-800 dark:text-yellow-300 font-semibold">
-                  Request sedang diproses admin. Silakan tunggu persetujuan.
-                </p>
-              </div>
-            </div>
-          ) : requestStatus === 'approved' ? (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-4">
-              <p className="text-green-800 dark:text-green-300 font-semibold">
-                Request sudah disetujui. Silakan refresh halaman untuk melihat data anak.
-              </p>
-            </div>
-          ) : requestStatus === 'rejected' ? (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
-              <p className="text-red-800 dark:text-red-300 font-semibold">
-                Request ditolak admin. Silakan hubungi admin untuk informasi lebih lanjut.
-              </p>
-            </div>
-          ) : null}
-
-          {/* Request Form */}
-          {!requestStatus && (
-            <>
-              {showRequestForm ? (
-                <form onSubmit={handleRequest} className="space-y-4 bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      NIS Anak
-                    </label>
-                    <input
-                      type="text"
-                      value={nisInput}
-                      onChange={(e) => setNisInput(e.target.value)}
-                      placeholder="Masukkan NIS anak"
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-100"
-                      required
-                      disabled={requestLoading}
-                    />
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Masukkan NIS (Nomor Induk Siswa) anak Anda. Request akan ditinjau oleh admin.
-                    </p>
-                  </div>
-                  {error && (
-                    <div className="text-red-600 dark:text-red-400 text-sm">{error}</div>
-                  )}
-                  <div className="flex gap-2">
-                    <button
-                      type="submit"
-                      disabled={requestLoading}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors disabled:opacity-50"
-                    >
-                      {requestLoading ? "Mengirim..." : "Ajukan Request"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowRequestForm(false);
-                        setNisInput("");
-                        setError("");
-                      }}
-                      className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md transition-colors"
-                      disabled={requestLoading}
-                    >
-                      Batal
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <button
-                  onClick={() => setShowRequestForm(true)}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors font-semibold flex items-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                  </svg>
-                  Ajukan Hubungan ke Anak
-                </button>
-              )}
-            </>
-          )}
-        </div>
+        <p>Tidak ada data anak yang terhubung dengan akun Anda.</p>
       ) : (
         <>
           <div className="mb-4">

@@ -21,10 +21,7 @@ export async function GET(request, { params }) {
         // Perbaikan 2: Menambahkan logika otorisasi untuk role 'orangtua'
         if (currentUser.role === 'orangtua') {
             // Cari data orang tua berdasarkan user_id yang sedang login
-            const parentData = await Orangtua.findOne({ 
-              user_id: currentUser.id, 
-              siswa_ids: id 
-            });
+            const parentData = await Orangtua.findOne({ user_id: currentUser.id, siswa_id: id });
 
             // Jika orang tua tidak terdaftar atau tidak memiliki anak dengan ID tersebut, tolak akses
             if (!parentData) {

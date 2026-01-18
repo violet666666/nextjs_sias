@@ -120,7 +120,7 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          title="Total Students"
+          title="Total Siswa"
           value={dashboardData.totalStudents || 0}
           change={5}
           icon={Users}
@@ -128,7 +128,7 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
           trend="up"
         />
         <MetricCard
-          title="Active Classes"
+          title="Kelas Aktif"
           value={dashboardData.activeClasses || 0}
           change={-2}
           icon={BookOpen}
@@ -136,7 +136,7 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
           trend="down"
         />
         <MetricCard
-          title="Completion Rate"
+          title="Tingkat Penyelesaian"
           value={`${dashboardData.completionRate || 0}%`}
           change={8}
           icon={CheckCircle}
@@ -144,7 +144,7 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
           trend="up"
         />
         <MetricCard
-          title="Average Grade"
+          title="Rata-rata Nilai"
           value={`${dashboardData.averageGrade || 0}%`}
           change={3}
           icon={Award}
@@ -158,7 +158,7 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
         {/* Attendance Trend */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Attendance Trend
+            Tren Kehadiran
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={dashboardData.attendanceTrend || []}>
@@ -172,14 +172,14 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
                 dataKey="present"
                 stroke="#10B981"
                 strokeWidth={2}
-                name="Present"
+                name="Hadir"
               />
               <Line
                 type="monotone"
                 dataKey="absent"
                 stroke="#EF4444"
                 strokeWidth={2}
-                name="Absent"
+                name="Absen"
               />
             </LineChart>
           </ResponsiveContainer>
@@ -188,7 +188,7 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
         {/* Grade Distribution */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Grade Distribution
+            Distribusi Nilai
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
@@ -216,7 +216,7 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
         {/* Subject Performance */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Subject Performance
+            Performa Mata Pelajaran
           </h3>
           <ResponsiveContainer width="100%" height={300}>
             <RadarChart data={dashboardData.subjectPerformance || []}>
@@ -224,7 +224,7 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
               <PolarAngleAxis dataKey="subject" stroke="#6B7280" fontSize={12} />
               <PolarRadiusAxis angle={90} domain={[0, 100]} stroke="#6B7280" />
               <Radar
-                name="Performance"
+                name="Performa"
                 dataKey="score"
                 stroke="#3B82F6"
                 fill="#3B82F6"
@@ -238,7 +238,7 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
         {/* Recent Activity */}
         <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Recent Activity
+            Aktivitas Terkini
           </h3>
           <div className="space-y-4">
             {dashboardData.recentActivity?.map((activity, index) => (
@@ -265,7 +265,7 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
               </div>
             )) || (
                 <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                  No recent activity
+                  Tidak ada aktivitas terkini
                 </p>
               )}
           </div>
@@ -279,7 +279,7 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
       {/* Teacher Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          title="Kelas Saya"
+          title="Kelas Aktif"
           value={dashboardData.myClasses || 0}
           icon={BookOpen}
           color="blue"
@@ -288,82 +288,89 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
           title="Total Siswa"
           value={dashboardData.myStudents || 0}
           icon={Users}
-          color="green"
+          color="indigo"
         />
         <MetricCard
           title="Tugas Aktif"
           value={dashboardData.myAssignments || 0}
           icon={FileText}
-          color="purple"
+          color="green"
         />
         <MetricCard
-          title="Siswa Berisiko"
-          value={dashboardData.atRiskStudents?.length || 0}
-          icon={AlertTriangle}
-          color="red"
+          title="Tingkat Kehadiran"
+          value={`${dashboardData.attendanceRate || 0}%`}
+          icon={Calendar}
+          color="yellow"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Class Performance Chart */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Class Performance */}
+        <div className="lg:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Performa Per Kelas
+            Rata-rata Nilai per Kelas
           </h3>
-          {dashboardData.classPerformance && dashboardData.classPerformance.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={dashboardData.classPerformance.map(c => ({ kelas: c.kelas, nilai: c.averageGrade }))}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="kelas" stroke="#6B7280" fontSize={12} />
-                <YAxis stroke="#6B7280" fontSize={12} />
-                <Tooltip />
-                <Bar dataKey="nilai" fill="#3B82F6" name="Rata-rata Nilai" />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-              Belum ada data performa kelas
-            </p>
-          )}
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={dashboardData.classPerformance || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+              <XAxis dataKey="kelas" stroke="#6B7280" fontSize={12} />
+              <YAxis stroke="#6B7280" fontSize={12} />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="averageGrade" fill="#8884d8" name="Rata-rata" />
+              <Bar dataKey="totalStudents" fill="#82ca9d" name="Jml Siswa" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
 
-        {/* At Risk Students Widget */}
+        {/* At Risk Students */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-500" />
-            Siswa Berisiko
-          </h3>
-          {dashboardData.atRiskStudents && dashboardData.atRiskStudents.length > 0 ? (
-            <div className="space-y-3">
-              {dashboardData.atRiskStudents.map((student, index) => (
-                <div key={index} className="flex items-start space-x-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                  <div className="p-2 rounded-full bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400">
-                    <AlertTriangle className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {student.nama}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {student.issues?.map((issue, i) => (
-                        <span key={i} className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded">
-                          {issue}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+              ⚠️ Siswa Perlu Perhatian
+            </h3>
+            <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full dark:bg-red-900 dark:text-red-200">
+              Butuh Tindakan
+            </span>
+          </div>
+          <div className="space-y-3">
+            {dashboardData.atRiskStudents && dashboardData.atRiskStudents.length > 0 ? (
+              dashboardData.atRiskStudents.map((student, idx) => (
+                <div key={idx} className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-900/40">
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{student.nama}</p>
+                  <ul className="mt-1 text-xs text-red-600 dark:text-red-400 list-disc list-inside">
+                    {student.issues.map((issue, i) => (
+                      <li key={i}>{issue}</li>
+                    ))}
+                  </ul>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-2" />
-              <p className="text-gray-500 dark:text-gray-400">
-                Tidak ada siswa berisiko saat ini
-              </p>
-            </div>
-          )}
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+                <p>Semua siswa dalam kondisi baik!</p>
+              </div>
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* Assignment Completion */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+          Tingkat Pengumpulan Tugas
+        </h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={dashboardData.assignmentCompletion || []}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="tugas" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="completed" fill="#82ca9d" name="Sudah Dinilai" />
+            <Bar dataKey="totalSubmissions" fill="#8884d8" name="Total Terkumpul" />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );
@@ -373,57 +380,62 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
       {/* Student Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          title="My Classes"
+          title="Kelas Saya"
           value={dashboardData.myClasses || 0}
           icon={BookOpen}
           color="blue"
         />
         <MetricCard
-          title="Pending Tasks"
+          title="Total Tugas"
           value={dashboardData.myAssignments || 0}
           icon={FileText}
           color="red"
         />
         <MetricCard
-          title="My Average"
+          title="Rata-rata Nilai"
           value={dashboardData.myGrades?.average || 0}
           icon={Award}
           color="purple"
         />
         <MetricCard
-          title="Attendance"
+          title="Kehadiran"
           value={`${dashboardData.myAttendance?.rate || 0}%`}
           icon={Calendar}
           color="green"
         />
       </div>
 
-      {/* Progress Chart */}
+      {/* Upcoming Deadlines */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          My Progress
+          Deadline Mendatang
         </h3>
-        <ResponsiveContainer width="100%" height={400}>
-          <AreaChart data={dashboardData.myProgress || []}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-            <XAxis dataKey="subject" stroke="#6B7280" fontSize={12} />
-            <YAxis stroke="#6B7280" fontSize={12} />
-            <Tooltip />
-            <Area
-              type="monotone"
-              dataKey="grade"
-              stroke="#3B82F6"
-              fill="#3B82F6"
-              fillOpacity={0.3}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        {dashboardData.upcomingDeadlines && dashboardData.upcomingDeadlines.length > 0 ? (
+          <div className="space-y-3">
+            {dashboardData.upcomingDeadlines.map((deadline, idx) => (
+              <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-gray-100">{deadline.judul}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{deadline.kelas_id?.nama_kelas || 'Kelas'}</p>
+                </div>
+                <span className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                  {deadline.tanggal_deadline ? new Date(deadline.tanggal_deadline).toLocaleDateString('id-ID') : '-'}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+            <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
+            <p>Tidak ada deadline mendatang</p>
+          </div>
+        )}
       </div>
     </div>
   );
 
   const renderParentDashboard = () => {
-    // Calculate average grade from childrenPerformance
+    // Calculate average from childrenPerformance array
     const childrenPerf = dashboardData.childrenPerformance || [];
     const avgGrade = childrenPerf.length > 0
       ? Math.round(childrenPerf.reduce((sum, c) => sum + (c.averageGrade || 0), 0) / childrenPerf.length)
@@ -432,53 +444,51 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
     return (
       <div className="space-y-6">
         {/* Parent Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <MetricCard
-            title="Children"
+            title="Jumlah Anak"
             value={dashboardData.childrenCount || 0}
             icon={Users}
             color="blue"
           />
           <MetricCard
-            title="Average Grade"
+            title="Rata-rata Nilai Anak"
             value={avgGrade}
             icon={Award}
             color="purple"
           />
           <MetricCard
-            title="Attendance Rate"
+            title="Tingkat Kehadiran"
             value={`${dashboardData.childrenAttendance || 0}%`}
             icon={Calendar}
             color="green"
-          />
-          <MetricCard
-            title="Recent Updates"
-            value={dashboardData.recentUpdates?.length || 0}
-            icon={FileText}
-            color="yellow"
           />
         </div>
 
         {/* Children Performance */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-            Children Performance
+            Performa Anak
           </h3>
           {childrenPerf.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={childrenPerf.map(c => ({ nama: c.nama, grade: c.averageGrade, total: c.totalGrades }))}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="nama" stroke="#6B7280" fontSize={12} />
-                <YAxis stroke="#6B7280" fontSize={12} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="grade" fill="#3B82F6" name="Rata-rata Nilai" />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="space-y-4">
+              {childrenPerf.map((child, idx) => (
+                <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div>
+                    <p className="font-medium text-gray-900 dark:text-gray-100">{child.nama}</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{child.totalGrades} tugas dinilai</p>
+                  </div>
+                  <span className={`px-3 py-1 rounded-full font-bold ${child.averageGrade >= 70 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                    {child.averageGrade}
+                  </span>
+                </div>
+              ))}
+            </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-              Belum ada data performa anak
-            </p>
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+              <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p>Data anak belum tersedia</p>
+            </div>
           )}
         </div>
 
@@ -489,22 +499,13 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
               Update Terbaru
             </h3>
             <div className="space-y-3">
-              {dashboardData.recentUpdates.map((update, index) => (
-                <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                  <div className="p-2 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
-                    <Award className="w-4 h-4" />
+              {dashboardData.recentUpdates.map((update, idx) => (
+                <div key={idx} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <Award className="w-5 h-5 text-blue-500" />
+                  <div>
+                    <p className="text-sm text-gray-900 dark:text-gray-100">{update.description}</p>
+                    <p className="text-xs text-gray-500">{update.timestamp ? new Date(update.timestamp).toLocaleDateString('id-ID') : ''}</p>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {update.title}
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {update.description}
-                    </p>
-                  </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {update.timestamp ? new Date(update.timestamp).toLocaleDateString('id-ID') : ''}
-                  </span>
                 </div>
               ))}
             </div>

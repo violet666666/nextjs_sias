@@ -10,9 +10,7 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
     await connectDB();
-    // Next.js 15: params is async, need to await
-    const { id } = await params;
-    const req = await ParentChildRequest.findById(id);
+    const req = await ParentChildRequest.findById(params.id);
     if (!req || req.status !== 'pending') {
       return NextResponse.json({ error: 'Request tidak ditemukan atau sudah diproses.' }, { status: 404 });
     }

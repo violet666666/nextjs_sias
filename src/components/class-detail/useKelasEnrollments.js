@@ -7,7 +7,7 @@ export default function useKelasEnrollments(kelasId, refreshKey = 0) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    async function fetchStudents() {
+    async function fetchEnrollments() {
       if (!kelasId) {
         setStudents([]);
         setLoading(false);
@@ -17,13 +17,13 @@ export default function useKelasEnrollments(kelasId, refreshKey = 0) {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetchWithAuth(`/api/kelas/${kelasId}/students`);
+        const res = await fetchWithAuth(`/api/enrollments?kelas_id=${kelasId}`);
         if (!res.ok) {
           const data = await res.json();
           throw new Error(data.error || 'Gagal mengambil data siswa');
         }
-        const studentsData = await res.json();
-        setStudents(studentsData);
+        const enrollments = await res.json();
+        setStudents(enrollments.map(e => ({ ...e.siswa_id, enrollmentId: e._id })));
       } catch (err) {
         setError(err.message);
         setStudents([]);
@@ -31,7 +31,7 @@ export default function useKelasEnrollments(kelasId, refreshKey = 0) {
       setLoading(false);
     }
     
-    fetchStudents();
+    fetchEnrollments();
   }, [kelasId, refreshKey]);
 
   return { students, loading, error };

@@ -1,24 +1,9 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
-import Notification from '@/models/Notification';
+import Notification from '@/lib/models/Notification';
 import NotificationService from '@/lib/services/notificationService';
 import { logCRUDAction } from '@/lib/auditLogger';
-
-// Temporary mock data until Notification model is properly set up
-const mockNotifications = [
-  {
-    _id: '1',
-    title: 'Selamat Datang',
-    message: 'Selamat datang di sistem akademik',
-    type: 'info',
-    category: 'system',
-    priority: 'medium',
-    read: false,
-    createdAt: new Date().toISOString(),
-    user_id: { nama: 'Admin', email: 'admin@example.com' }
-  }
-];
 
 // GET: List notifications with pagination and filters
 export async function GET(request) {

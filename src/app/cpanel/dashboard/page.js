@@ -8,13 +8,13 @@ import SimpleBarChart from "@/components/common/BarChart";
 import SimplePieChart from "@/components/common/PieChart";
 import { exportDashboardSummaryPDF, downloadPDF } from "@/lib/pdfExporter";
 import Toast from "@/components/common/Toast";
-import { 
-  Users, 
-  BookOpen, 
-  FileText, 
-  Calendar, 
-  BarChart3, 
-  TrendingUp, 
+import {
+  Users,
+  BookOpen,
+  FileText,
+  Calendar,
+  BarChart3,
+  TrendingUp,
   AlertCircle,
   Clock,
   CheckCircle,
@@ -46,7 +46,7 @@ const ROLE_LABELS = {
 };
 
 const DashboardCard = ({ title, value, icon: Icon, color = 'blue', change = null, onClick = null }) => (
-  <div 
+  <div
     className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200 ${onClick ? 'cursor-pointer' : ''}`}
     onClick={onClick}
   >
@@ -110,10 +110,10 @@ export default function DashboardPage() {
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setUser(userData);
-      
+
       // Log activity
       logActivity('view_dashboard', { page: 'dashboard' });
-      
+
       fetchDashboardData(userData);
 
       // Initialize socket for dashboard stats
@@ -127,9 +127,9 @@ export default function DashboardPage() {
         newSocket.on('connect', () => {
           console.log('Socket connected for dashboard stats');
         });
-        
+
         newSocket.on("dashboard_stats_updated", (newStats) => {
-          setStats(currentStats => ({...currentStats, ...newStats}));
+          setStats(currentStats => ({ ...currentStats, ...newStats }));
           setToast({ message: "Data dashboard telah diperbarui!", type: "info" });
         });
 
@@ -323,28 +323,9 @@ export default function DashboardPage() {
           <LoadingSpinner />
         ) : (
           <div className="space-y-8">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {roleStats.map((stat, index) => (
-                <div
-                  key={index}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                        {stat.title}
-                      </p>
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {stat.value}
-                      </p>
-                    </div>
-                    <div className={`p-3 rounded-full ${stat.bgColor}`}>
-                      <div className={stat.color}>{stat.icon}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            {/* Analytics Dashboard (Replaces manual stats) */}
+            <div className="mb-8">
+              <AdvancedDashboard user={user} role={user.role} />
             </div>
 
             {/* Main Content Grid */}
@@ -354,17 +335,19 @@ export default function DashboardPage() {
                 <QuickActions user={user} role={user.role} />
               </div>
 
-              {/* Activity Feed (Audit Log) */}
-              <div className="lg:col-span-2">
-                <ActivityFeed maxItems={10} />
-              </div>
+              {/* Activity Feed (Audit Log) - Admin Only */}
+              {user.role === 'admin' && (
+                <div className="lg:col-span-2">
+                  <ActivityFeed maxItems={10} />
+                </div>
+              )}
             </div>
           </div>
         )}
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast({ message: "", type: "success" })} 
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ message: "", type: "success" })}
         />
       </div>
     </ProtectedRoute>
@@ -464,24 +447,11 @@ function MonitoringAnakDropdown({ userId }) {
     fetchWithAuth("/api/orangtua")
       .then((res) => res.json())
       .then((all) => {
-        // Pastikan 'all' adalah array dan format untuk siswa_ids array
-        const allData = Array.isArray(all) ? all : [];
-        const filteredData = allData.filter((d) => d.user_id?._id === userId || d.user_id === userId);
-        
-        // Flatten siswa_ids dari semua record
-        const allAnak = filteredData.flatMap(item => {
-          if (item.siswa_ids && Array.isArray(item.siswa_ids)) {
-            return item.siswa_ids;
-          } else if (item.siswa_id) {
-            // Backward compatibility
-            return [item.siswa_id];
-          }
-          return [];
-        });
-        
-        setAnakList(allAnak);
-        if (allAnak.length > 0) {
-          const id = allAnak[0]._id || allAnak[0];
+        // Pastikan 'all' adalah array
+        const anak = Array.isArray(all) ? all.filter((d) => d.user_id?._id === userId || d.user_id === userId) : [];
+        setAnakList(anak);
+        if (anak.length > 0) {
+          const id = anak[0].siswa_id?._id || anak[0].siswa_id;
           setSelected(id);
           localStorage.setItem("anak_id", id); // Set default anak ke localStorage
         }
@@ -506,15 +476,11 @@ function MonitoringAnakDropdown({ userId }) {
           value={selected || ""}
           onChange={handleSelect}
         >
-          {anakList.map((a) => {
-            const anakId = a._id || a;
-            const anakNama = a.nama || "-";
-            return (
-              <option key={anakId} value={anakId}>
-                {anakNama}
-              </option>
-            );
-          })}
+          {anakList.map((a) => (
+            <option key={a.siswa_id?._id || a.siswa_id} value={a.siswa_id?._id || a.siswa_id}>
+              {a.siswa_id?.nama || "-"}
+            </option>
+          ))}
         </select>
       </div>
       <MonitoringAnakById siswaId={selected} />
@@ -538,22 +504,19 @@ function MonitoringAnakById({ siswaId }) {
     }).finally(() => setLoading(false));
   }, [siswaId]);
 
-  // Fetch kelas untuk siswaId
-  const [kelasSiswaFiltered, setKelasSiswa] = useState([]);
+  // Fetch enrollment untuk siswaId
+  const [enrollments, setEnrollments] = useState([]);
   useEffect(() => {
-    if (!siswaId) {
-      setKelasSiswa([]);
-      return;
-    }
-    fetchWithAuth(`/api/kelas?siswa_id=${siswaId}`)
+    fetchWithAuth("/api/enrollments")
       .then((res) => res.json())
-      .then((data) => {
-        setKelasSiswa(Array.isArray(data) ? data : []);
+      .then((all) => {
+        // Pastikan 'all' adalah array
+        setEnrollments(Array.isArray(all) ? all.filter((e) => e.siswa_id?._id === siswaId || e.siswa_id === siswaId) : []);
       });
   }, [siswaId]);
-  const kelasIds = kelasSiswaFiltered.map((k) => k._id);
+  const kelasIds = enrollments.map((e) => e.kelas_id?._id || e.kelas_id);
   // Pastikan 'kelas' dan 'tugas' adalah array sebelum filter
-  const kelasSiswaFilteredFiltered = Array.isArray(kelas) ? kelas.filter((k) => kelasIds.includes(k._id)) : [];
+  const kelasSiswa = Array.isArray(kelas) ? kelas.filter((k) => kelasIds.includes(k._id)) : [];
   const tugasSiswa = Array.isArray(tugas) ? tugas.filter((t) => kelasIds.includes(t.kelas_id?._id || t.kelas_id)) : [];
 
   // Monitoring Kehadiran & Nilai
@@ -562,7 +525,7 @@ function MonitoringAnakById({ siswaId }) {
       <div className="text-lg mb-4">Daftar Kelas Anak</div>
       {loading ? (
         <div className="text-gray-600 dark:text-gray-400">Loading kelas...</div>
-      ) : kelasSiswaFiltered.length === 0 ? (
+      ) : kelasSiswa.length === 0 ? (
         <div className="text-gray-600 dark:text-gray-400">Tidak ada kelas yang diikuti anak ini.</div>
       ) : (
         <table className="min-w-full bg-white dark:bg-gray-800 rounded shadow mb-8 transition-colors duration-300">
@@ -574,7 +537,7 @@ function MonitoringAnakById({ siswaId }) {
             </tr>
           </thead>
           <tbody>
-            {kelasSiswaFiltered.map((k) => (
+            {kelasSiswa.map((k) => (
               <tr key={k._id}>
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{k.nama_kelas}</td>
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{k.tahun_ajaran}</td>
@@ -605,7 +568,7 @@ function MonitoringAnakById({ siswaId }) {
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{t.judul}</td>
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{t.deskripsi}</td>
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{new Date(t.tanggal_deadline).toLocaleString()}</td>
-                <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{kelasSiswaFiltered.find((k) => k._id === (t.kelas_id?._id || t.kelas_id))?.nama_kelas || '-'}</td>
+                <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{kelasSiswa.find((k) => k._id === (t.kelas_id?._id || t.kelas_id))?.nama_kelas || '-'}</td>
               </tr>
             ))}
           </tbody>
@@ -614,7 +577,7 @@ function MonitoringAnakById({ siswaId }) {
       <div className="text-lg mb-2 font-semibold">Monitoring Kehadiran</div>
       <KehadiranTable siswaId={siswaId} />
       <div className="text-lg mb-2 font-semibold mt-8">Monitoring Nilai</div>
-      <NilaiTable siswaId={siswaId} kelas={kelasSiswaFilteredFiltered} />
+      <NilaiTable siswaId={siswaId} kelas={kelasSiswa} />
     </div>
   );
 }
@@ -644,7 +607,7 @@ function UserManagement() {
   }, []);
 
   const filteredUsers = roleFilter === 'all' ? users : users.filter(u => u.role === roleFilter);
-  
+
   const handleEdit = (user) => {
     setEditUser(user);
     setForm({ nama: user.nama, email: user.email, password: '', role: user.role });
@@ -792,7 +755,7 @@ function SiswaDashboard({ user, kelas, tugas, loading }) {
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
-  const [kelasSiswaFilteredUser, setKelasSiswaUser] = useState([]);
+  const [enrollments, setEnrollments] = useState([]);
   const [enrollLoading, setEnrollLoading] = useState(true);
 
   // Fetch submissions milik siswa ini
@@ -855,18 +818,19 @@ function SiswaDashboard({ user, kelas, tugas, loading }) {
 
   useEffect(() => {
     setEnrollLoading(true);
-    fetchWithAuth(`/api/kelas?siswa_id=${user.id}`)
+    fetchWithAuth("/api/enrollments")
       .then((res) => res.json())
-      .then((data) => {
-        setKelasSiswaUser(Array.isArray(data) ? data : []);
+      .then((all) => {
+        // Pastikan 'all' adalah array
+        setEnrollments(Array.isArray(all) ? all.filter((e) => e.siswa_id?._id === user.id || e.siswa_id === user.id) : []);
       })
       .finally(() => setEnrollLoading(false));
   }, [user.id]);
 
   // Kelas yang diikuti siswa
-  const kelasIds = kelasSiswaFilteredUser.map((k) => k._id);
+  const kelasIds = enrollments.map((e) => e.kelas_id?._id || e.kelas_id);
   // Pastikan 'kelas' adalah array sebelum filter
-  const kelasSiswaFiltered = Array.isArray(kelas) ? kelas.filter((k) => kelasIds.includes(k._id)) : [];
+  const kelasSiswa = Array.isArray(kelas) ? kelas.filter((k) => kelasIds.includes(k._id)) : [];
   // Tugas dari kelas yang diikuti siswa
   const tugasSiswa = tugas.filter((t) => kelasIds.includes(t.kelas_id?._id || t.kelas_id));
 
@@ -875,7 +839,7 @@ function SiswaDashboard({ user, kelas, tugas, loading }) {
       <div className="text-lg mb-4">Daftar Kelas</div>
       {enrollLoading ? (
         <div className="text-gray-600 dark:text-gray-400">Loading kelas...</div>
-      ) : kelasSiswaFiltered.length === 0 ? (
+      ) : kelasSiswa.length === 0 ? (
         <div className="text-gray-600 dark:text-gray-400">Tidak ada kelas yang diikuti.</div>
       ) : (
         <table className="min-w-full bg-white dark:bg-gray-800 rounded shadow mb-8 transition-colors duration-300">
@@ -887,7 +851,7 @@ function SiswaDashboard({ user, kelas, tugas, loading }) {
             </tr>
           </thead>
           <tbody>
-            {kelasSiswaFiltered.map((k) => (
+            {kelasSiswa.map((k) => (
               <tr key={k._id}>
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{k.nama_kelas}</td>
                 <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{k.tahun_ajaran}</td>
@@ -923,7 +887,7 @@ function SiswaDashboard({ user, kelas, tugas, loading }) {
                   <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{t.judul}</td>
                   <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{t.deskripsi}</td>
                   <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{new Date(t.tanggal_deadline).toLocaleString()}</td>
-                  <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{kelasSiswaFiltered.find((k) => k._id === (t.kelas_id?._id || t.kelas_id))?.nama_kelas || '-'}</td>
+                  <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">{kelasSiswa.find((k) => k._id === (t.kelas_id?._id || t.kelas_id))?.nama_kelas || '-'}</td>
                   <td className="py-2 px-4 border-b text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600">
                     {sudah ? (
                       <span className="text-green-600 font-semibold">Sudah Dikumpulkan</span>

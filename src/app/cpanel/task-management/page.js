@@ -76,6 +76,8 @@ export default function TaskManagementPage() {
       // Fetch classes for teacher
       if (userData.role === "guru") {
         fetchClasses(userData.id || userData._id);
+      } else if (userData.role === "admin") {
+        fetchClasses();
       }
     } else {
       router.push("/login");
@@ -84,7 +86,8 @@ export default function TaskManagementPage() {
 
   const fetchClasses = async (teacherId) => {
     try {
-      const res = await fetchWithAuth(`/api/kelas?guru_id=${teacherId}`);
+      const endpoint = teacherId ? `/api/kelas?guru_id=${teacherId}` : '/api/kelas';
+      const res = await fetchWithAuth(endpoint);
       if (res.ok) {
         const data = await res.json();
         setClasses(data);
@@ -160,7 +163,7 @@ export default function TaskManagementPage() {
   if (!user) return <LoadingSpinner />;
 
   return (
-    <ProtectedRoute requiredRoles={['guru']}>
+    <ProtectedRoute requiredRoles={['admin','guru']}>
       <div className="max-w-6xl mx-auto py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Manajemen Tugas</h1>

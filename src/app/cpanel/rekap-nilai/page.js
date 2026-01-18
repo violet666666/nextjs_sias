@@ -28,9 +28,9 @@ export default function RekapNilaiPage() {
       setSiswaList([]);
       return;
     }
-    fetchWithAuth(`/api/kelas/${kelasId}/students`)
+    fetchWithAuth(`/api/enrollments?kelas_id=${kelasId}`)
       .then(res => res.json())
-      .then(data => setSiswaList(Array.isArray(data) ? data : []));
+      .then(data => setSiswaList(Array.isArray(data) ? data.map(e => e.siswa_id) : []));
   }, [kelasId]);
 
   // Fetch rekap nilai

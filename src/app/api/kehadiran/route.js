@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Kehadiran from '@/lib/models/Kehadiran';
+import Enrollment from '@/lib/models/Enrollment'; // Untuk filter orangtua
 import Orangtua from '@/lib/models/Orangtua'; // Impor Orangtua
 import { authenticateAndAuthorize } from '@/lib/authMiddleware';
 import Kelas from '@/lib/models/Kelas'; // Untuk verifikasi guru
@@ -74,16 +75,12 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Field wajib tidak boleh kosong' }, { status: 400 });
     }
 
-    // Ambil kelas_ids dari mapel (gunakan kelas pertama jika ada)
+    // Ambil kelas_id dari mapel
     const mapel = await MataPelajaran.findById(mapel_id);
     if (!mapel) {
       return NextResponse.json({ error: 'Mata pelajaran tidak ditemukan.' }, { status: 404 });
     }
-    const kelas_ids = mapel.kelas_ids || [];
-    if (kelas_ids.length === 0) {
-      return NextResponse.json({ error: 'Mata pelajaran belum di-assign ke kelas manapun.' }, { status: 400 });
-    }
-    const kelas_id = kelas_ids[0]; // Gunakan kelas pertama
+    const kelas_id = mapel.kelas_id;
 
     // Jika guru, pastikan dia mengajar kelas tersebut
     if (currentUser.role === 'guru') {
@@ -106,7 +103,7 @@ export async function POST(request) {
     });
     // Kirim notifikasi ke orangtua jika siswa tidak hadir
     if (status !== 'Hadir') {
-      const orangtuaList = await Orangtua.find({ siswa_ids: siswa_id });
+      const orangtuaList = await Orangtua.find({ siswa_id });
       for (const ortu of orangtuaList) {
         await NotificationService.createNotification({
           user_id: ortu.user_id,

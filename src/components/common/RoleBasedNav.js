@@ -7,7 +7,6 @@ import {
   Home, 
   Users, 
   BookOpen, 
-  GraduationCap,
   FileText, 
   Calendar, 
   BarChart3, 
@@ -85,16 +84,10 @@ const navigationConfig = {
       description: 'Overview dan analitik'
     },
     {
-      title: 'Kelas Saya (Wali Kelas)',
+      title: 'Kelas Saya',
       href: '/cpanel/classes',
       icon: BookOpen,
-      description: 'Lihat dan kelola kelas sebagai wali kelas'
-    },
-    {
-      title: 'Mata Pelajaran',
-      href: '/cpanel/my-subjects',
-      icon: GraduationCap,
-      description: 'Lihat mata pelajaran yang diajar dan kelas-kelasnya'
+      description: 'Lihat dan kelola kelas yang diajar'
     },
     {
       title: 'Manajemen Tugas',
@@ -167,10 +160,10 @@ const navigationConfig = {
       description: 'Ringkasan anak'
     },
     {
-      title: 'Kelas Anak',
-      href: '/cpanel/classes',
-      icon: BookOpen,
-      description: 'Lihat kelas anak'
+      title: 'Monitoring Anak',
+      href: '/cpanel/children',
+      icon: Users,
+      description: 'Pantau perkembangan anak'
     },
     {
       title: 'Nilai Anak',

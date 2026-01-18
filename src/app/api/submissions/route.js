@@ -59,8 +59,8 @@ export async function GET(request) {
       }
     } else if (currentUser.role === 'orangtua' && !filter.siswa_id) {
       try {
-        const relasiAnak = await Orangtua.find({ user_id: currentUser.id }).select('siswa_ids');
-        const anakIds = relasiAnak.flatMap(r => r.siswa_ids || []);
+        const relasiAnak = await Orangtua.find({ user_id: currentUser.id }).select('siswa_id');
+        const anakIds = relasiAnak.map(r => r.siswa_id);
         
         if (anakIds.length > 0) {
           filter.siswa_id = { $in: anakIds };

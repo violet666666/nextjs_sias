@@ -1,15 +1,28 @@
-import React, { useState, useEffect, useMemo } from 'react';
+"use client";
+import React, { useState, useEffect } from 'react';
 import useKelasDetail from './useKelasDetail';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import Toast from '../common/Toast';
-import {
-  Award, ClipboardCheck, FileText, User, GraduationCap, Calendar,
-  CheckCircle, XCircle, AlertCircle, Bell
-} from 'lucide-react';
+import { BookOpen, Award, Calendar, ArrowLeft, Users } from 'lucide-react';
+import Link from 'next/link';
+
+// Stats Card Component
+const StatCard = ({ title, value, icon: Icon, color }) => (
+  <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</p>
+        <p className="text-xl font-bold text-gray-900 dark:text-white mt-1">{value}</p>
+      </div>
+      <div className={`p-2 rounded-full ${color}`}>
+        <Icon className="w-5 h-5 text-white" />
+      </div>
+    </div>
+  </div>
+);
 
 export default function ClassDetailOrangtua({ kelasId }) {
-  const [refreshKey, setRefreshKey] = useState(0);
-  const { kelas, tasks, nilai, attendance, announcements, comments, loading } = useKelasDetail(kelasId, refreshKey);
+  const { kelas, tasks, nilai, attendance, loading } = useKelasDetail(kelasId);
   const [anakList, setAnakList] = useState([]);
   const [selectedAnakId, setSelectedAnakId] = useState(null);
   const [myNilai, setMyNilai] = useState([]);
@@ -24,20 +37,9 @@ export default function ClassDetailOrangtua({ kelasId }) {
     fetchWithAuth(`/api/orangtua?user_id=${u.id}`)
       .then(res => res.ok ? res.json() : [])
       .then(data => {
-        const allData = Array.isArray(data) ? data : [];
-        // Flatten siswa_ids dari semua record
-        const allAnak = allData.flatMap(item => {
-          if (item.siswa_ids && Array.isArray(item.siswa_ids)) {
-            return item.siswa_ids;
-          } else if (item.siswa_id) {
-            // Backward compatibility
-            return [item.siswa_id];
-          }
-          return [];
-        });
-        setAnakList(allAnak);
-        if (allAnak.length > 0) {
-          setSelectedAnakId(allAnak[0]._id || allAnak[0]);
+        setAnakList(Array.isArray(data) ? data : []);
+        if (data && data.length > 0) {
+          setSelectedAnakId(data[0].siswa_id?._id || data[0].siswa_id);
         }
       });
   }, []);
@@ -48,215 +50,155 @@ export default function ClassDetailOrangtua({ kelasId }) {
     setMyAttendance(attendance.filter(a => a.siswa_id === selectedAnakId || a.siswa_id?._id === selectedAnakId));
   }, [selectedAnakId, nilai, attendance]);
 
-  // Calculate stats for selected child
-  const stats = useMemo(() => {
-    // Average grade
-    const totalNilai = myNilai.reduce((acc, n) => acc + (n.nilai || 0), 0);
-    const avgNilai = myNilai.length ? Math.round(totalNilai / myNilai.length) : 0;
-
-    // Attendance rate
-    const hadirCount = myAttendance.filter(a => a.status === 'Hadir').length;
-    const totalAtt = myAttendance.length;
-    const attendanceRate = totalAtt ? Math.round((hadirCount / totalAtt) * 100) : 0;
-
-    // Pending tasks (tugas yang belum dikumpulkan)
-    const submittedTaskIds = myNilai.map(n => n.tugas_id?._id || n.tugas_id);
-    const pendingTasks = tasks.filter(t => !submittedTaskIds.includes(t._id)).length;
-
-    return { avgNilai, attendanceRate, pendingTasks };
-  }, [myNilai, myAttendance, tasks]);
-
   if (loading) return (
-    <div className="min-h-screen p-6 bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600 dark:text-gray-400">Memuat data kelas...</p>
-      </div>
+    <div className="flex items-center justify-center min-h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
     </div>
   );
-  if (!kelas) return (
-    <div className="min-h-screen p-6 bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
-      <p className="text-red-600">Data kelas tidak ditemukan.</p>
-    </div>
-  );
+  if (!kelas) return <div className="text-center py-12 text-gray-500">Data kelas tidak ditemukan.</div>;
+
+  // Calculate Stats for selected child
+  const avgNilai = myNilai.length > 0
+    ? Math.round(myNilai.reduce((acc, n) => acc + (n.nilai || 0), 0) / myNilai.length)
+    : 0;
+  const totalHadir = myAttendance.filter(a => a.status === 'Hadir').length;
+  const totalAbsen = myAttendance.length;
+  const kehadiranPersen = totalAbsen > 0 ? Math.round((totalHadir / totalAbsen) * 100) : 0;
+  const tugasBelumSelesai = tasks.filter(t => {
+    const submitted = myNilai.find(n => n.tugas_id === t._id || n.tugas_id?._id === t._id);
+    return !submitted;
+  }).length;
+
+  const selectedAnak = anakList.find(a => (a.siswa_id?._id || a.siswa_id) === selectedAnakId);
 
   return (
-    <div className="min-h-screen p-6 bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+    <div className="max-w-4xl mx-auto p-4 md:p-6">
+      {toast.message && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'info' })} />
+      )}
+
       {/* Header */}
-      <div className="rounded-2xl bg-gradient-to-r from-purple-500 via-purple-400 to-purple-300 text-white shadow-lg p-6 mb-8">
-        <h2 className="text-3xl font-bold mb-2 drop-shadow-lg">{kelas.nama_kelas || kelas.namaKelas}</h2>
-        <div className="flex flex-wrap gap-4 items-center text-base font-medium opacity-90">
-          <span className="inline-flex items-center gap-2">
-            <GraduationCap className="w-5 h-5" />
-            Tahun Ajaran: {kelas.tahun_ajaran || '-'}
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <User className="w-5 h-5" />
-            Guru: {kelas.guru_id?.nama || kelas.guruKelas || '-'}
-          </span>
-        </div>
+      <div className="mb-6">
+        <Link href="/cpanel/classes" className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800 mb-4">
+          <ArrowLeft className="w-4 h-4 mr-1" /> Kembali ke Daftar Kelas
+        </Link>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+          {kelas.nama_kelas || kelas.namaKelas}
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">
+          Tahun Ajaran: {kelas.tahun_ajaran || '-'} • Wali Kelas: {kelas.guru_id?.nama || '-'}
+        </p>
       </div>
 
-      {/* Child Selector */}
-      <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h3 className="font-semibold text-lg mb-4 text-gray-900 dark:text-gray-100 flex items-center gap-2">
-          <User className="w-5 h-5" />
-          Pilih Anak
-        </h3>
-        {anakList.length === 0 ? (
-          <p className="text-gray-500 dark:text-gray-400">Tidak ada data anak terhubung.</p>
-        ) : (
+      {/* Pilih Anak */}
+      {anakList.length > 1 && (
+        <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <Users className="w-4 h-4 inline mr-1" /> Pilih Anak:
+          </label>
           <select
-            className="w-full md:w-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-purple-500"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg p-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={selectedAnakId || ''}
             onChange={e => setSelectedAnakId(e.target.value)}
           >
             {anakList.map(a => (
-              <option key={a.siswa_id?._id || a.siswa_id || a._id} value={a.siswa_id?._id || a.siswa_id || a._id}>
-                {a.siswa_id?.nama || a.nama || 'Nama Anak Tidak Tersedia'}
+              <option key={a.siswa_id?._id || a.siswa_id} value={a.siswa_id?._id || a.siswa_id}>
+                {a.siswa_id?.nama || 'Nama Anak'}
               </option>
             ))}
           </select>
+        </div>
+      )}
+
+      {/* Info Anak */}
+      {selectedAnak && (
+        <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-100 dark:border-blue-800">
+          <p className="text-lg font-semibold text-blue-800 dark:text-blue-200">
+            Menampilkan data untuk: {selectedAnak.siswa_id?.nama || 'Anak'}
+          </p>
+        </div>
+      )}
+
+      {/* Stats Widget */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <StatCard title="Rata-rata Nilai" value={avgNilai} icon={Award} color="bg-green-500" />
+        <StatCard title="Kehadiran" value={`${kehadiranPersen}%`} icon={Calendar} color="bg-purple-500" />
+        <StatCard title="Tugas Belum Selesai" value={tugasBelumSelesai} icon={BookOpen} color="bg-orange-500" />
+      </div>
+
+      {/* Daftar Nilai Anak */}
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Nilai Anak</h3>
+        {myNilai.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">
+            <Award className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>Belum ada nilai untuk anak Anda.</p>
+          </div>
+        ) : (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Tugas</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Nilai</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase">Feedback</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {myNilai.map((n, i) => (
+                  <tr key={i} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{n.tugas_id?.judul || '-'}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`px-2 py-1 text-xs font-semibold rounded ${n.nilai >= 70 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                        {n.nilai ?? '-'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">{n.feedback || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
-      {/* Stats Widget */}
-      {selectedAnakId && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-4 border border-gray-200 dark:border-gray-700">
-            <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-lg">
-              <Award className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Rata-rata Nilai</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.avgNilai || '-'}</p>
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-4 border border-gray-200 dark:border-gray-700">
-            <div className="bg-green-100 dark:bg-green-900 p-3 rounded-lg">
-              <ClipboardCheck className="w-6 h-6 text-green-600 dark:text-green-400" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Kehadiran</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.attendanceRate}%</p>
-            </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-4 border border-gray-200 dark:border-gray-700">
-            <div className="bg-orange-100 dark:bg-orange-900 p-3 rounded-lg">
-              <FileText className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Tugas Belum Selesai</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{stats.pendingTasks}</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Kehadiran Anak */}
       <div className="mb-6">
-        <h3 className="font-semibold">Nilai Anak</h3>
-        {toast.message && (
-          <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: '', type: 'info' })} />
-        )}
-        <table className="modern-table">
-          <tbody>
-            {myNilai.length === 0 && !loading && (
-              <tr><td colSpan="100%" className="text-center py-6 text-gray-400">Belum ada nilai</td></tr>
-            )}
-            {loading && (
-              <tr><td colSpan="100%" className="text-center py-6"><span className="loading-spinner"></span> Memuat data...</td></tr>
-            )}
-            {myNilai.map((n, i) => (
-              <tr key={i}>
-                <td>{n.tugas_id?.judul || '-'}</td>
-                <td>{n.nilai ?? '-'}</td>
-                <td>{n.feedback ?? '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className="mb-6">
-        <h3 className="font-semibold">Kehadiran Anak</h3>
-        {loading ? (
-          <div className="text-center py-6"><span className="spinner"></span> Memuat data...</div>
-        ) : myAttendance.length === 0 ? (
-          <div className="empty-state">
-            <svg className="mb-2 w-10 h-10 text-gray-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
-            <div>Belum ada data kehadiran.</div>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Rekap Kehadiran Anak</h3>
+        {myAttendance.length === 0 ? (
+          <div className="text-center py-8 text-gray-400">
+            <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+            <p>Belum ada data kehadiran.</p>
           </div>
         ) : (
-          <>
-            <table className="modern-table mb-2">
-              <thead>
-                <tr>
-                  <th className="px-4 py-2">Tanggal</th>
-                  <th className="px-4 py-2">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {myAttendance.map((a, i) => {
-                  let badge = 'bg-gray-200 text-gray-700';
-                  if (a.status === 'Hadir') badge = 'bg-green-100 text-green-700';
-                  else if (a.status === 'Izin') badge = 'bg-blue-100 text-blue-700';
-                  else if (a.status === 'Sakit') badge = 'bg-yellow-100 text-yellow-700';
-                  else if (a.status === 'Alfa') badge = 'bg-red-100 text-red-700';
-                  return (
-                    <tr key={i}>
-                      <td className="px-4 py-2">{a.tanggal ? new Date(a.tanggal).toLocaleDateString() : '-'}</td>
-                      <td className="px-4 py-2"><span className={`inline-block px-2 py-1 text-xs rounded font-semibold ${badge}`}>{a.status}</span></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {/* Progress bar */}
-            {(() => {
-              const total = myAttendance.length;
-              const hadir = myAttendance.filter(a => a.status === 'Hadir').length;
-              const persen = total ? Math.round((hadir / total) * 100) : 0;
-              let badge = 'bg-gray-200 text-gray-700';
-              if (persen >= 90) badge = 'bg-green-100 text-green-700';
-              else if (persen >= 75) badge = 'bg-blue-100 text-blue-700';
-              else if (persen >= 50) badge = 'bg-yellow-100 text-yellow-700';
-              else badge = 'bg-red-100 text-red-700';
-              return (
-                <div className="flex items-center gap-2 mt-2">
-                  <div className="w-32 bg-gray-100 rounded-full h-3 overflow-hidden">
-                    <div className={`h-3 rounded-full ${badge}`} style={{ width: `${persen}%` }}></div>
-                  </div>
-                  <span className={`inline-block px-2 py-1 text-xs rounded font-semibold ${badge}`}>{persen}% Hadir</span>
-                </div>
-              );
-            })()}
-          </>
-        )}
-      </div>
-      <div className="mb-6">
-        <h3 className="font-semibold">Pengumuman</h3>
-        {loading ? (
-          <div className="text-center py-6"><span className="spinner"></span> Memuat pengumuman...</div>
-        ) : announcements.length === 0 ? (
-          <div className="empty-state">
-            <svg className="mb-2 w-10 h-10 text-gray-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-            <div>Belum ada pengumuman untuk kelas ini.</div>
-          </div>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {announcements.map((a, i) => (
-              <div key={a._id || i} className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-4 border border-gray-100 dark:border-slate-700 flex flex-col gap-2">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-bold text-lg text-blue-700 dark:text-blue-300 truncate">Pengumuman</span>
-                  <span className="ml-auto text-xs text-gray-400">{a.tanggal ? new Date(a.tanggal).toLocaleDateString('id-ID') : ''}</span>
-                </div>
-                <div className="text-sm text-gray-700 dark:text-gray-200 mb-2 line-clamp-3">{a.deskripsi || '-'}</div>
-                <div className="flex items-center gap-2 mt-auto">
-                  <span className="text-xs text-gray-500">Oleh: {a.author?.nama || '-'}</span>
-                </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div className="grid grid-cols-4 gap-4 text-center mb-4">
+              <div>
+                <p className="text-2xl font-bold text-green-600">{myAttendance.filter(a => a.status === 'Hadir').length}</p>
+                <p className="text-xs text-gray-500">Hadir</p>
               </div>
-            ))}
+              <div>
+                <p className="text-2xl font-bold text-blue-600">{myAttendance.filter(a => a.status === 'Izin').length}</p>
+                <p className="text-xs text-gray-500">Izin</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-yellow-600">{myAttendance.filter(a => a.status === 'Sakit').length}</p>
+                <p className="text-xs text-gray-500">Sakit</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-red-600">{myAttendance.filter(a => a.status === 'Alfa').length}</p>
+                <p className="text-xs text-gray-500">Alfa</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-gray-100 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+                <div className={`h-3 rounded-full ${kehadiranPersen >= 75 ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: `${kehadiranPersen}%` }}></div>
+              </div>
+              <span className={`text-sm font-semibold ${kehadiranPersen >= 75 ? 'text-green-600' : 'text-red-600'}`}>{kehadiranPersen}%</span>
+            </div>
           </div>
         )}
       </div>
     </div>
   );
-} 
+}

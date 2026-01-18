@@ -45,10 +45,12 @@ export default function MonitoringPage() {
       setLoading(true);
       setError('');
       try {
-        const res = await fetchWithAuth('/api/orangtua');
-        setChildren(Array.isArray(res) ? res : []);
-      } catch {
-        setError('Gagal memuat data anak.');
+        const res = await fetchWithAuth('/api/orangtua/children-summary');
+        if (!res.ok) throw new Error('Gagal memuat data anak.');
+        const data = await res.json();
+        setChildren(Array.isArray(data.children) ? data.children : []);
+      } catch (err) {
+        setError(err.message || 'Gagal memuat data anak.');
       } finally {
         setLoading(false);
       }
@@ -105,8 +107,8 @@ export default function MonitoringPage() {
                 </tr>
               </thead>
               <tbody>
-                {children.map((relasi) => (
-                  <MonitoringChildRow key={relasi.siswa_id._id} siswa={relasi.siswa_id} />
+                {children.map((child) => (
+                  <MonitoringChildRow key={child._id} siswa={child} />
                 ))}
               </tbody>
             </table>
@@ -118,28 +120,32 @@ export default function MonitoringPage() {
 }
 
 function MonitoringChildRow({ siswa }) {
-  const [nilai, setNilai] = useState('-');
-  const [kehadiran, setKehadiran] = useState('-');
-  const [loading, setLoading] = useState(true);
+  const [nilai, setNilai] = useState(siswa.nilaiRataRata ?? '-');
+  const [kehadiran, setKehadiran] = useState(siswa.kehadiran ?? '-');
+  const [loading, setLoading] = useState(!(siswa.nilaiRataRata && siswa.kehadiran));
 
   useEffect(() => {
     let isMounted = true;
     async function fetchData() {
       setLoading(true);
       try {
-        // Fetch nilai rata-rata
         const nilaiRes = await fetchWithAuth(`/api/rekap/nilai?siswa_id=${siswa._id}`);
         let avg = '-';
-        if (Array.isArray(nilaiRes) && nilaiRes.length > 0) {
-          const total = nilaiRes.reduce((sum, n) => sum + (n.avg_nilai || 0), 0);
-          avg = (total / nilaiRes.length).toFixed(2);
+        if (nilaiRes.ok) {
+          const nilaiData = await nilaiRes.json();
+          if (Array.isArray(nilaiData) && nilaiData.length > 0) {
+            const total = nilaiData.reduce((sum, n) => sum + (n.avg_nilai || 0), 0);
+            avg = (total / nilaiData.length).toFixed(2);
+          }
         }
-        // Fetch kehadiran
         const kehadiranRes = await fetchWithAuth(`/api/kehadiran?siswa_id=${siswa._id}`);
         let hadir = 0, total = 0;
-        if (Array.isArray(kehadiranRes) && kehadiranRes.length > 0) {
-          total = kehadiranRes.length;
-          hadir = kehadiranRes.filter(k => k.status === 'Hadir').length;
+        if (kehadiranRes.ok) {
+          const kehadiranData = await kehadiranRes.json();
+          if (Array.isArray(kehadiranData) && kehadiranData.length > 0) {
+            total = kehadiranData.length;
+            hadir = kehadiranData.filter(k => k.status === 'Hadir').length;
+          }
         }
         if (isMounted) {
           setNilai(avg);

@@ -13,9 +13,11 @@ export const ROUTE_PERMISSIONS = {
   '/cpanel/dashboard': ['admin', 'guru', 'siswa', 'orangtua'],
   '/cpanel/user-management': ['admin'],
   '/cpanel/classes': ['admin', 'guru'],
-  '/cpanel/my-subjects': ['guru'],
   '/cpanel/tasks': ['siswa'],
-  '/cpanel/orangtua-link': ['orangtua']
+  '/cpanel/task-management': ['admin', 'guru'],
+  '/cpanel/subjects': ['admin', 'guru'],
+  '/cpanel/orangtua-link': ['orangtua', 'admin'],
+  '/cpanel/settings': ['admin']
 };
 
 export function hasPermission(userRole, requiredRoles) {

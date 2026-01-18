@@ -18,9 +18,9 @@ export async function GET(request) {
     }
     const role = decoded.role;
     const userId = decoded.id || decoded.userId;
-    const Submission = (await import('@/lib/models/Submission.js')).default;
-    const Tugas = (await import('@/lib/models/Tugas.js')).default;
-    const Kelas = (await import('@/lib/models/Kelas.js')).default;
+    const Submission = (await import('@/lib/models/Submission')).default;
+    const Tugas = (await import('@/lib/models/Tugas')).default;
+    const Kelas = (await import('@/lib/models/Kelas')).default;
     let activities = [];
     if (role === 'guru') {
       // Submissions terbaru untuk tugas yang diajar guru ini
@@ -42,7 +42,7 @@ export async function GET(request) {
         .populate('siswa_id tugas_id');
     } else if (role === 'orangtua') {
       // Temukan anak-anak dari user ini, lalu ambil submission mereka
-      const User = (await import('@/lib/models/userModel.js')).default;
+      const User = (await import('@/lib/models/userModel')).default;
       const anakList = await User.find({ orangtua_id: userId });
       const anakIds = anakList.map(a => a._id);
       activities = await Submission.find({ siswa_id: { $in: anakIds } })

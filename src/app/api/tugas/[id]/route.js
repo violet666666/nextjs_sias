@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Tugas from '@/lib/models/Tugas';
+import Enrollment from '@/lib/models/Enrollment'; // Impor Enrollment
 import { authenticateAndAuthorize } from '@/lib/authMiddleware';
 import Kelas from '@/lib/models/Kelas'; // Untuk verifikasi guru
 import { logCRUDAction } from '@/lib/auditLogger';
@@ -22,8 +23,8 @@ export async function GET(request, { params }) {
     }
 
     if (currentUser.role === 'siswa') {
-      const kelas = await Kelas.findById(tugas.kelas_id._id);
-      if (!kelas || !kelas.siswa_ids.some(id => id.toString() === currentUser.id)) {
+      const enrollment = await Enrollment.findOne({ kelas_id: tugas.kelas_id._id, siswa_id: currentUser.id });
+      if (!enrollment) {
         return NextResponse.json({ error: 'Akses ditolak: Anda tidak terdaftar di kelas dari tugas ini.' }, { status: 403 });
       }
     } else if (currentUser.role === 'guru') {

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Orangtua from '@/lib/models/Orangtua';
+import Enrollment from '@/lib/models/Enrollment';
 import Kelas from '@/lib/models/Kelas';
 import Submission from '@/lib/models/Submission';
 import Kehadiran from '@/lib/models/Kehadiran';
@@ -16,31 +17,21 @@ export async function GET(request) {
 
     await connectDB();
 
-    // Ambil semua anak dari koleksi Orangtua (menggunakan siswa_ids array)
+    // Ambil semua anak dari koleksi Orangtua
     const relasiAnak = await Orangtua.find({ user_id: currentUser.id })
-      .populate('siswa_ids', 'nama email nis');
+      .populate('siswa_id', 'nama email')
+      .select('siswa_id');
 
-    if (relasiAnak.length === 0 || !relasiAnak[0].siswa_ids || relasiAnak[0].siswa_ids.length === 0) {
+    if (relasiAnak.length === 0) {
       return NextResponse.json({ children: [], summary: {} });
     }
 
-    // Flatten semua siswa_ids dari semua record Orangtua
-    const anakIds = relasiAnak.flatMap(r => {
-      if (!r.siswa_ids || !Array.isArray(r.siswa_ids)) return [];
-      return r.siswa_ids.map(s => {
-        // Handle jika sudah di-populate (object) atau masih ObjectId
-        return s._id ? s._id : s;
-      });
-    });
-    const anakData = relasiAnak.flatMap(r => {
-      if (!r.siswa_ids || !Array.isArray(r.siswa_ids)) return [];
-      return r.siswa_ids.filter(s => s && (s._id || s));
-    });
+    const anakIds = relasiAnak.map(r => r.siswa_id._id);
 
-    // Ambil data kelas yang memiliki anak-anak di siswa_ids
-    const kelasWithAnak = await Kelas.find({ siswa_ids: { $in: anakIds } })
-      .populate('guru_id', 'nama email')
-      .populate('siswa_ids', 'nama email nis');
+    // Ambil data enrollment anak-anak
+    const enrollments = await Enrollment.find({ siswa_id: { $in: anakIds } })
+      .populate('kelas_id', 'nama_kelas guru_id')
+      .populate('siswa_id', 'nama email');
 
     // Ambil data nilai anak-anak
     const submissions = await Submission.find({ siswa_id: { $in: anakIds } })
@@ -57,33 +48,20 @@ export async function GET(request) {
     }).populate('kelas_id', 'nama_kelas');
 
     // Format data untuk response
-    const childrenData = anakData.map(anak => {
-      // Handle jika sudah di-populate (object) atau masih ObjectId
-      const anakId = (anak._id ? anak._id : anak).toString();
-      const anakNama = anak.nama || '-';
-      const anakEmail = anak.email || '-';
-      const anakNis = anak.nis || '-';
+    const childrenData = relasiAnak.map(relasi => {
+      const anakId = relasi.siswa_id._id.toString();
       
-      // Data kelas anak - cari kelas yang memiliki anak ini di siswa_ids
-      const anakKelas = kelasWithAnak.filter(k => {
-        const siswaIds = k.siswa_ids.map(s => (s._id || s).toString());
-        return siswaIds.includes(anakId);
-      });
+      // Data kelas anak
+      const anakEnrollments = enrollments.filter(e => e.siswa_id._id.toString() === anakId);
       
       // Data nilai anak
-      const anakSubmissions = submissions.filter(s => {
-        const siswaId = s.siswa_id?._id ? s.siswa_id._id.toString() : s.siswa_id?.toString();
-        return siswaId === anakId;
-      });
+      const anakSubmissions = submissions.filter(s => s.siswa_id.toString() === anakId);
       const averageGrade = anakSubmissions.length > 0 
         ? Math.round(anakSubmissions.reduce((sum, sub) => sum + (sub.nilai || 0), 0) / anakSubmissions.length)
         : 0;
 
       // Data kehadiran anak
-      const anakKehadiran = kehadiran.filter(k => {
-        const siswaId = k.siswa_id?._id ? k.siswa_id._id.toString() : k.siswa_id?.toString();
-        return siswaId === anakId;
-      });
+      const anakKehadiran = kehadiran.filter(k => k.siswa_id.toString() === anakId);
       const totalAttendance = anakKehadiran.length;
       const presentAttendance = anakKehadiran.filter(k => k.status === 'hadir').length;
       const attendanceRate = totalAttendance > 0 
@@ -91,16 +69,16 @@ export async function GET(request) {
         : 0;
 
       return {
-        id: anakId,
-        nama: anakNama,
-        email: anakEmail,
-        nis: anakNis,
-        kelas: anakKelas.map(k => ({
-          id: k._id,
-          nama: k.nama_kelas || '-',
-          guru_id: k.guru_id?._id || k.guru_id || null
+        _id: anakId,
+        nama: relasi.siswa_id.nama,
+        email: relasi.siswa_id.email,
+        kelas: anakEnrollments.map(e => ({
+          id: e.kelas_id._id,
+          nama: e.kelas_id.nama_kelas,
+          guru_id: e.kelas_id.guru_id
         })),
-        averageGrade,
+        nilaiRataRata: Number(averageGrade || 0).toFixed(2),
+        kehadiran: `${presentAttendance}/${totalAttendance}`,
         attendanceRate,
         totalAssignments: anakSubmissions.length,
         completedAssignments: anakSubmissions.filter(s => s.status === 'submitted').length

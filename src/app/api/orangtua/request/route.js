@@ -17,22 +17,13 @@ export async function POST(request) {
     if (!siswa) {
       return NextResponse.json({ error: 'Siswa tidak ditemukan.' }, { status: 404 });
     }
-    // Cek relasi sudah ada (menggunakan siswa_ids array)
-    const Orangtua = (await import('@/lib/models/Orangtua.js')).default;
-    const existingRelation = await Orangtua.findOne({ 
-      user_id: authResult.user.id, 
-      siswa_ids: siswa._id 
-    });
-    if (existingRelation) {
-      return NextResponse.json({ error: 'Relasi dengan anak ini sudah ada.' }, { status: 409 });
-    }
-    
     // Cek duplikat request
     const existing = await ParentChildRequest.findOne({ orangtua_id: authResult.user.id, siswa_id: siswa._id, status: 'pending' });
     if (existing) {
       return NextResponse.json({ error: 'Request sudah diajukan dan masih pending.' }, { status: 409 });
     }
-    
+    // Cek relasi sudah ada
+    // ... (opsional: cek di koleksi Orangtua)
     const req = await ParentChildRequest.create({ orangtua_id: authResult.user.id, siswa_id: siswa._id });
     return NextResponse.json({ success: true, request: req });
   } catch (e) {

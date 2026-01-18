@@ -1,7 +1,8 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import "sweetalert2/dist/sweetalert2.min.css";
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import SessionProviderWrapper from '@/components/common/SessionProviderWrapper';
+import { Toaster } from 'react-hot-toast';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,9 +26,12 @@ export default function RootLayout({ children }) {
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning={true}
       >
-        <ErrorBoundary>
-          {children}
-        </ErrorBoundary>
+        <SessionProviderWrapper>
+          <ErrorBoundary>
+            {children}
+            <Toaster position="top-right" />
+          </ErrorBoundary>
+        </SessionProviderWrapper>
       </body>
     </html>
   );

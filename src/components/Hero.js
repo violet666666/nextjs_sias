@@ -1,60 +1,33 @@
 import Image from "next/image";
-import Link from "next/link";
 
 const Hero = () => {
   return (
-    <section className="relative bg-blue-700 h-screen flex items-center overflow-hidden pt-20">
-      <div className="container mx-auto flex flex-col lg:flex-row items-center justify-between px-4 sm:px-6 lg:px-8 py-12 sm:py-20 z-10 relative">
+    <section className="relative bg-gradient-to-br from-blue-700 to-blue-500 min-h-[80vh] flex items-center overflow-hidden">
+      <div className="container mx-auto flex flex-col md:flex-row items-center justify-between px-6 py-16 z-10 relative">
         {/* Left: Text & CTA */}
-        <div className="max-w-2xl text-center lg:text-left mb-8 sm:mb-12 lg:mb-0 w-full lg:w-auto">
-          <div className="flex items-center justify-center lg:justify-start mb-4 sm:mb-6">
-            <div className="relative">
-              <Image 
-                src="/assets/loginpage/logo circle rounded.png" 
-                alt="SIAS Logo" 
-                width={60}
-                height={60}
-                className="drop-shadow-lg w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 lg:w-[70px] lg:h-[70px]"
-              />
-            </div>
-            <span className="ml-3 sm:ml-4 text-2xl sm:text-3xl md:text-4xl font-bold text-white tracking-wide drop-shadow-md">SIAS</span>
+        <div className="max-w-xl text-center md:text-left">
+          <div className="flex items-center justify-center md:justify-start mb-6">
+            <Image src="/assets/loginpage/logo circle rounded.png" alt="SIAS Logo" width={60} height={60} />
+            <span className="ml-3 text-3xl font-bold text-white tracking-wide">SIAS</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-extrabold text-white mb-4 sm:mb-6 leading-tight drop-shadow-lg">
-            Sistem Informasi <br />
-            <span className="text-green-300">Akademik Siswa</span>
+          <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-4 leading-tight drop-shadow-lg">
+            Build Your Landing Page <br /> With <span className="text-green-300 underline">SIAS</span>
           </h1>
-          <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-blue-100 mb-6 sm:mb-8 leading-relaxed px-2 sm:px-0">
-            Platform terintegrasi untuk memudahkan komunikasi antara orang tua, guru, dan siswa dalam memantau perkembangan akademik
+          <p className="text-lg text-blue-100 mb-8">
+            We are team of talented designers making websites
           </p>
-          <div className="flex justify-center lg:justify-start px-2 sm:px-0">
-            <Link 
-              href="/login" 
-              className="inline-block bg-green-500 hover:bg-green-600 text-white font-semibold px-6 sm:px-8 py-3 sm:py-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 text-base sm:text-lg w-full sm:w-auto text-center"
-            >
-              Masuk Sekarang
-            </Link>
-          </div>
+          <a href="/register" className="inline-block bg-green-400 hover:bg-green-500 text-white font-semibold px-6 py-3 rounded-lg shadow transition mb-4">
+            Get Started
+          </a>
         </div>
         {/* Right: Illustration */}
-        <div className="w-full lg:w-[500px] flex justify-center lg:justify-end mt-8 sm:mt-10 lg:mt-0">
-          <div className="relative w-full max-w-[300px] sm:max-w-[400px] lg:max-w-[450px]">
-            <Image 
-              src="/assets/loginpage/logo segi panjang.png" 
-              alt="SIAS Illustration" 
-              width={450} 
-              height={450} 
-              className="relative rounded-2xl shadow-2xl transform hover:scale-105 transition-transform duration-300 w-full h-auto"
-            />
-          </div>
+        <div className="w-full md:w-[400px] flex justify-center mt-10 md:mt-0">
+          <Image src="/assets/loginpage/logo segi panjang.png" alt="SIAS Illustration" width={350} height={350} className="rounded-xl shadow-lg" />
         </div>
       </div>
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5 z-0">
-        <div className="absolute top-0 left-0 w-full h-full" style={{
-          backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
-          backgroundSize: '40px 40px'
-        }}></div>
-      </div>
+      {/* Decorative shapes */}
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-300 opacity-20 rounded-full blur-3xl z-0" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-green-300 opacity-10 rounded-full blur-3xl z-0" />
     </section>
   );
 };

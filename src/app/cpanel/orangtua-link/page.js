@@ -37,16 +37,9 @@ export default function OrangtuaLinkPage() {
       .finally(() => setLoading(false));
 
     // Fetch requests
-    fetchWithAuth('/api/orangtua/request')
-      .then(async res => {
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && data.requests) {
-            setRequests(Array.isArray(data.requests) ? data.requests : []);
-          }
-        }
-      })
-      .catch(err => console.error('Error fetching requests:', err));
+    fetchWithAuth('/api/orangtua/request').then(res => {
+      if (res && res.requests) setRequests(res.requests);
+    });
   }, [router]);
 
   const handleSubmit = async (e) => {
@@ -71,59 +64,19 @@ export default function OrangtuaLinkPage() {
 
   const handleApprove = async (id) => {
     setReqLoading(true);
-    setError('');
-    setMessage('');
-    try {
-      const res = await fetchWithAuth(`/api/orangtua/request/${id}/approve`, { method: 'POST' });
-      if (res && res.ok) {
-        const data = await res.json();
-        setMessage(data.message || 'Request berhasil disetujui!');
-        // Refresh requests
-        const reqRes = await fetchWithAuth('/api/orangtua/request');
-        if (reqRes && reqRes.ok) {
-          const reqData = await reqRes.json();
-          if (reqData && reqData.success && reqData.requests) {
-            setRequests(Array.isArray(reqData.requests) ? reqData.requests : []);
-          }
-        }
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        setError(errorData?.error || 'Gagal menyetujui request.');
-      }
-    } catch (e) {
-      console.error('Error approving request:', e);
-      setError('Gagal menyetujui request.');
-    } finally {
-      setReqLoading(false);
-    }
+    await fetchWithAuth(`/api/orangtua/request/${id}/approve`, { method: 'PATCH' });
+    // Refresh requests
+    const res = await fetchWithAuth('/api/orangtua/request');
+    if (res && res.requests) setRequests(res.requests);
+    setReqLoading(false);
   };
-
   const handleReject = async (id) => {
     setReqLoading(true);
-    setError('');
-    setMessage('');
-    try {
-      const res = await fetchWithAuth(`/api/orangtua/request/${id}/reject`, { method: 'PATCH' });
-      if (res && res.ok) {
-        setMessage('Request berhasil ditolak.');
-        // Refresh requests
-        const reqRes = await fetchWithAuth('/api/orangtua/request');
-        if (reqRes && reqRes.ok) {
-          const reqData = await reqRes.json();
-          if (reqData && reqData.success && reqData.requests) {
-            setRequests(Array.isArray(reqData.requests) ? reqData.requests : []);
-          }
-        }
-      } else {
-        const errorData = await res.json().catch(() => ({}));
-        setError(errorData?.error || 'Gagal menolak request.');
-      }
-    } catch (e) {
-      console.error('Error rejecting request:', e);
-      setError('Gagal menolak request.');
-    } finally {
-      setReqLoading(false);
-    }
+    await fetchWithAuth(`/api/orangtua/request/${id}/reject`, { method: 'PATCH' });
+    // Refresh requests
+    const res = await fetchWithAuth('/api/orangtua/request');
+    if (res && res.requests) setRequests(res.requests);
+    setReqLoading(false);
   };
 
   if (loading) return <div className="p-6 text-center">Loading data...</div>;
@@ -172,85 +125,39 @@ export default function OrangtuaLinkPage() {
         </div>
         <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Hubungkan</button>
       </form>
-      {message && (
-        <div className="mt-4 p-3 bg-green-100 dark:bg-green-900 border border-green-400 dark:border-green-700 text-green-700 dark:text-green-300 rounded">
-          {message}
-        </div>
-      )}
+      {message && <div className="mt-4 text-center">{message}</div>}
       {/* Tabel request relasi */}
       <div className="mt-8">
-        <h3 className="font-semibold mb-4 text-lg">Request Relasi Orangtua-Anak</h3>
-        {requests.length === 0 ? (
-          <div className="text-center p-4 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded">
-            Belum ada request.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border text-sm">
-              <thead>
-                <tr className="bg-gray-100 dark:bg-gray-700">
-                  <th className="p-3 border text-left">Orang Tua</th>
-                  <th className="p-3 border text-left">Siswa</th>
-                  <th className="p-3 border text-left">NIS</th>
-                  <th className="p-3 border text-left">Status</th>
-                  <th className="p-3 border text-left">Aksi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map(req => (
-                  <tr key={req._id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-3 border">
-                      <div className="font-medium">{req.orangtua_id?.nama || '-'}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{req.orangtua_id?.email || '-'}</div>
-                    </td>
-                    <td className="p-3 border">
-                      <div className="font-medium">{req.siswa_id?.nama || '-'}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{req.siswa_id?.email || '-'}</div>
-                    </td>
-                    <td className="p-3 border">
-                      <span className="font-mono text-sm">{req.siswa_id?.nis || '-'}</span>
-                    </td>
-                    <td className="p-3 border">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                        req.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200' :
-                        req.status === 'approved' ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200' :
-                        'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                      }`}>
-                        {req.status === 'pending' ? 'Menunggu' : req.status === 'approved' ? 'Disetujui' : 'Ditolak'}
-                      </span>
-                    </td>
-                    <td className="p-3 border">
-                      {req.status === 'pending' && (
-                        <div className="flex gap-2">
-                          <button 
-                            className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors" 
-                            disabled={reqLoading} 
-                            onClick={() => handleApprove(req._id)}
-                          >
-                            {reqLoading ? 'Memproses...' : 'Setujui'}
-                          </button>
-                          <button 
-                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors" 
-                            disabled={reqLoading} 
-                            onClick={() => handleReject(req._id)}
-                          >
-                            Tolak
-                          </button>
-                        </div>
-                      )}
-                      {req.status === 'approved' && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Sudah diproses</span>
-                      )}
-                      {req.status === 'rejected' && (
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Ditolak</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <h3 className="font-semibold mb-2">Request Relasi Orangtua-Anak</h3>
+        <table className="w-full border text-sm">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="p-2 border">Orang Tua</th>
+              <th className="p-2 border">Siswa</th>
+              <th className="p-2 border">Status</th>
+              <th className="p-2 border">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {requests.length === 0 ? (
+              <tr><td colSpan={4} className="text-center p-2">Belum ada request.</td></tr>
+            ) : requests.map(req => (
+              <tr key={req._id}>
+                <td className="p-2 border">{req.orangtua_id?.nama} <br /> <span className="text-xs text-gray-500">{req.orangtua_id?.email}</span></td>
+                <td className="p-2 border">{req.siswa_id?.nama} <br /> <span className="text-xs text-gray-500">{req.siswa_id?.nis}</span></td>
+                <td className="p-2 border">{req.status}</td>
+                <td className="p-2 border">
+                  {req.status === 'pending' && (
+                    <>
+                      <button className="bg-green-600 text-white px-2 py-1 rounded mr-2" disabled={reqLoading} onClick={() => handleApprove(req._id)}>Approve</button>
+                      <button className="bg-red-600 text-white px-2 py-1 rounded" disabled={reqLoading} onClick={() => handleReject(req._id)}>Tolak</button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

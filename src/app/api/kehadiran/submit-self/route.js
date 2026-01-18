@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Kehadiran from '@/lib/models/Kehadiran';
 import AttendanceSession from '@/lib/models/AttendanceSession';
-import Kelas from '@/lib/models/Kelas';
+import Enrollment from '@/lib/models/Enrollment';
 import User from '@/lib/models/userModel'; // Untuk mendapatkan user
 import { authenticateAndAuthorize } from '@/lib/authMiddleware';
 
@@ -38,8 +38,8 @@ export async function POST(request) {
     }
 
     // 2. Cek apakah siswa terdaftar di kelas tersebut
-    const kelas = await Kelas.findById(activeSession.kelas_id);
-    if (!kelas || !kelas.siswa_ids.some(id => id.toString() === currentUser.id)) {
+    const enrollment = await Enrollment.findOne({ kelas_id: activeSession.kelas_id, siswa_id: currentUser.id });
+    if (!enrollment) {
       return NextResponse.json({ error: 'Anda tidak terdaftar di kelas ini.' }, { status: 403 });
     }
 
