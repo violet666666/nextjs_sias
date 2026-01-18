@@ -11,4 +11,8 @@ const KelasSchema = new mongoose.Schema({
   siswa_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }], // Daftar siswa dalam kelas
 }, { timestamps: true });
 
+// Indexes for search performance
+KelasSchema.index({ nama_kelas: 1 });
+KelasSchema.index({ tahun_ajaran: 1 });
+
 export default mongoose.models.Kelas || mongoose.model("Kelas", KelasSchema); 

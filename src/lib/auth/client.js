@@ -11,9 +11,15 @@ export function getStoredToken() {
 export function isAuthenticated() {
   const token = getStoredToken();
   if (!token) return false;
-  
+
   try {
-    jwt.verify(token, process.env.NEXT_PUBLIC_JWT_SECRET);
+    const decoded = jwt.decode(token);
+    if (!decoded || !decoded.exp) return false;
+
+    // Check if token is expired
+    const currentTime = Math.floor(Date.now() / 1000);
+    if (decoded.exp < currentTime) return false;
+
     return true;
   } catch (error) {
     return false;
@@ -23,7 +29,7 @@ export function isAuthenticated() {
 export function getUser() {
   const token = getStoredToken();
   if (!token) return null;
-  
+
   try {
     return jwt.decode(token);
   } catch (error) {
