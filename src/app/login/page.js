@@ -77,7 +77,7 @@ export default function LoginPage() {
           <div className="mb-8 flex justify-center">
             <div className="bg-white/10 backdrop-blur-lg p-6 rounded-2xl shadow-xl border border-white/20">
               <Image
-                src="/assets/loginpage/pancake.png" // Placeholder, ideally a school illustration
+                src="/assets/loginpage/imageLoginPage.png"
                 alt="SIAS Illustration"
                 width={200}
                 height={200}
