@@ -16,23 +16,23 @@ export const ROUTE_PERMISSIONS = {
   '/cpanel/user-management': ['admin'],
   '/cpanel/audit-logs': ['admin'],
   '/cpanel/system-settings': ['admin'],
-
+  
   // Teacher and Admin routes
   '/cpanel/classes': ['admin', 'guru'],
   '/cpanel/task-management': ['admin', 'guru'],
   '/cpanel/attendance-management': ['admin', 'guru'],
   '/cpanel/grades': ['admin', 'guru'],
   '/cpanel/bulletin-management': ['admin', 'guru'],
-
+  
   // Student routes
   '/cpanel/tasks': ['siswa'],
   '/cpanel/attendance': ['siswa'],
   '/cpanel/grades': ['siswa'],
-
+  
   // Parent routes
   '/cpanel/orangtua-link': ['orangtua'],
   '/cpanel/monitoring': ['orangtua'],
-
+  
   // Common routes (all authenticated users)
   '/cpanel/profile': ['admin', 'guru', 'siswa', 'orangtua'],
   '/cpanel/dashboard': ['admin', 'guru', 'siswa', 'orangtua'],
@@ -40,14 +40,14 @@ export const ROUTE_PERMISSIONS = {
 
 export function hasPermission(userRole, requiredRoles) {
   if (!userRole || !requiredRoles) return false;
-
+  
   // Check if user's role is in the required roles
   if (requiredRoles.includes(userRole)) return true;
-
+  
   // Check role hierarchy (higher roles can access lower role resources)
   const userRoleLevel = ROLE_HIERARCHY[userRole] || 0;
   const requiredRoleLevel = Math.min(...requiredRoles.map(role => ROLE_HIERARCHY[role] || 0));
-
+  
   return userRoleLevel >= requiredRoleLevel;
 }
 
@@ -56,14 +56,14 @@ export function getRoutePermissions(path) {
   if (ROUTE_PERMISSIONS[path]) {
     return ROUTE_PERMISSIONS[path];
   }
-
+  
   // Check for partial matches (for dynamic routes)
   for (const route in ROUTE_PERMISSIONS) {
     if (path.startsWith(route)) {
       return ROUTE_PERMISSIONS[route];
     }
   }
-
+  
   // Default to requiring authentication
   return ['admin', 'guru', 'siswa', 'orangtua'];
 }
@@ -71,7 +71,7 @@ export function getRoutePermissions(path) {
 // Client-side auth utilities
 export function verifyToken(token) {
   if (!token) return { success: false, error: 'No token provided' };
-
+  
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     return { success: true, decoded };
@@ -90,15 +90,10 @@ export function isAuthenticated() {
   if (typeof window === 'undefined') return false;
   const token = localStorage.getItem('token');
   if (!token) return false;
-
+  
   try {
-    // Decode token without verifying signature (client-side only)
-    const decoded = jwt.decode(token);
-    if (!decoded || !decoded.exp) return false;
-
-    const currentTime = Math.floor(Date.now() / 1000);
-    if (decoded.exp < currentTime) return false;
-
+    // Use NEXT_PUBLIC_ prefix for client-side env vars
+    jwt.verify(token, process.env.NEXT_PUBLIC_JWT_SECRET);
     return true;
   } catch (error) {
     return false;
@@ -118,7 +113,7 @@ export function withRoleCheck(Component, requiredRoles) {
 // Filter navigation items based on user role
 export function filterNavigationByRole(navigationItems, userRole) {
   if (!userRole) return [];
-
+  
   return navigationItems.filter(item => {
     if (!item.roles || item.roles.length === 0) return true;
     return hasPermission(userRole, item.roles);

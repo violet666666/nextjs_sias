@@ -19,11 +19,12 @@ async function connectDB() {
   }
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI, {
-      dbName: 'sias_db', // Ensure this matches your database name
+    const opts = {
       bufferCommands: false,
-      connectTimeoutMS: 30000, // 30 seconds timeout
-      family: 4 // Force IPv4 to avoid queryTxt ETIMEOUT
+    };
+
+    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+      return mongoose;
     });
   }
 

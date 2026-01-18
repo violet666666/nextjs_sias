@@ -50,18 +50,13 @@ UserSchema.methods.updateActivity = async function (action, details = {}) {
     details,
     timestamp: new Date()
   });
-
+  
   // Keep only last 50 activities
   if (this.activity_log.length > 50) {
     this.activity_log = this.activity_log.slice(-50);
   }
-
+  
   return await this.save();
 };
-
-// Indexes for search performance
-UserSchema.index({ nama: 1, role: 1 });
-UserSchema.index({ nisn: 1 });
-UserSchema.index({ role: 1 });
 
 export default mongoose.models.User || mongoose.model("User", UserSchema);
