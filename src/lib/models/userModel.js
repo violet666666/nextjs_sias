@@ -61,7 +61,6 @@ UserSchema.methods.updateActivity = async function (action, details = {}) {
 
 // Indexes for search performance
 UserSchema.index({ nama: 1, role: 1 });
-UserSchema.index({ email: 1 });
 UserSchema.index({ nisn: 1 });
 UserSchema.index({ role: 1 });
 
