@@ -4,13 +4,14 @@ import Kelas from '../models/Kelas';
 import Tugas from '../models/Tugas';
 import Kehadiran from '../models/Kehadiran';
 import Submission from '../models/Submission';
+import MataPelajaran from '../models/MataPelajaran';
 import mongoose from 'mongoose';
 
 class AnalyticsService {
   // Dashboard Overview Statistics
   static async getDashboardStats(role, userId = null) {
     await connectDB();
-    
+
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfYear = new Date(now.getFullYear(), 0, 1);
@@ -44,6 +45,7 @@ class AnalyticsService {
         classPerformance: await this.getClassPerformance(userId),
         assignmentCompletion: await this.getAssignmentCompletion(userId),
         attendanceRate: await this.getAttendanceRate(userId),
+        atRiskStudents: await this.getAtRiskStudents(userId),
         recentSubmissions: await this.getRecentSubmissions(userId),
         recentGrades: await this.getRecentGrades(userId),
       };
@@ -111,7 +113,7 @@ class AnalyticsService {
   // Assignments by Status
   static async getAssignmentsByStatus() {
     const now = new Date();
-    
+
     const result = await Tugas.aggregate([
       {
         $addFields: {
@@ -186,7 +188,7 @@ class AnalyticsService {
   static async getMonthlyGrowth() {
     const months = [];
     const now = new Date();
-    
+
     for (let i = 5; i >= 0; i--) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       months.push(date);
@@ -274,10 +276,83 @@ class AnalyticsService {
   }
 
   // Teacher-specific methods
+
+  // Helper: Get unique Class IDs where teacher is involved (Homeroom OR Subject)
+  static async getTeacherScope(guruId) {
+    // 1. Homeroom classes (where teacher is wali kelas)
+    const homeroomClasses = await Kelas.find({ guru_id: guruId }).distinct('_id');
+
+    // 2. Subject classes (where teacher teaches a subject)
+    const subjectClasses = await MataPelajaran.find({
+      $or: [{ guru_id: guruId }, { guru_ids: guruId }]
+    }).distinct('kelas_id');
+
+    // Combine and unique
+    const allClassIds = [...new Set([
+      ...homeroomClasses.map(id => id.toString()),
+      ...subjectClasses.map(id => id?.toString()).filter(Boolean)
+    ])];
+
+    // Get Subject IDs for this teacher
+    const mySubjectIds = await MataPelajaran.find({
+      $or: [{ guru_id: guruId }, { guru_ids: guruId }]
+    }).distinct('_id');
+
+    return { classIds: allClassIds, subjectIds: mySubjectIds };
+  }
+
+  // Get students at risk (low grades or high absence)
+  static async getAtRiskStudents(guruId) {
+    const { subjectIds, classIds } = await this.getTeacherScope(guruId);
+
+    const riskMap = new Map();
+
+    // 1. Low Grades (nilai < 75)
+    const tugasIds = await Tugas.find({
+      $or: [
+        { mata_pelajaran_id: { $in: subjectIds } },
+        { kelas_id: { $in: classIds } }
+      ]
+    }).distinct('_id');
+
+    const lowGrades = await Submission.find({
+      tugas_id: { $in: tugasIds },
+      nilai: { $lt: 75, $gt: 0 }
+    }).populate('siswa_id', 'nama email').limit(20);
+
+    lowGrades.forEach(g => {
+      if (!g.siswa_id) return;
+      const sid = g.siswa_id._id.toString();
+      if (!riskMap.has(sid)) {
+        riskMap.set(sid, { id: sid, nama: g.siswa_id.nama, issues: [] });
+      }
+      riskMap.get(sid).issues.push(`Nilai rendah: ${g.nilai}`);
+    });
+
+    // 2. High Absence (Alfa >= 2)
+    const badAttendance = await Kehadiran.aggregate([
+      { $match: { kelas_id: { $in: classIds.map(id => new mongoose.Types.ObjectId(id)) }, status: 'Alfa' } },
+      { $group: { _id: '$siswa_id', count: { $sum: 1 } } },
+      { $match: { count: { $gte: 2 } } }
+    ]);
+
+    await User.populate(badAttendance, { path: '_id', select: 'nama' });
+    badAttendance.forEach(a => {
+      if (!a._id) return;
+      const sid = a._id._id?.toString() || a._id.toString();
+      if (!riskMap.has(sid)) {
+        riskMap.set(sid, { id: sid, nama: a._id.nama || 'Unknown', issues: [] });
+      }
+      riskMap.get(sid).issues.push(`Alfa ${a.count} kali`);
+    });
+
+    return Array.from(riskMap.values()).slice(0, 5);
+  }
+
   static async getMyStudentsCount(guruId) {
     const myClasses = await Kelas.find({ guru_id: guruId }).select('_id');
     const classIds = myClasses.map(k => k._id);
-    
+
     // Count students enrolled in my classes
     const kelasList = await Kelas.find({ _id: { $in: classIds } });
     return kelasList.reduce((total, k) => total + (k.siswa_ids?.length || 0), 0);
@@ -285,12 +360,12 @@ class AnalyticsService {
 
   static async getClassPerformance(guruId) {
     const myClasses = await Kelas.find({ guru_id: guruId }).select('_id nama_kelas');
-    
+
     const performance = await Promise.all(myClasses.map(async (kelas) => {
       const grades = await Submission.find({ kelas_id: kelas._id });
-      
-      const average = grades.length > 0 
-        ? grades.reduce((sum, grade) => sum + grade.nilai, 0) / grades.length 
+
+      const average = grades.length > 0
+        ? grades.reduce((sum, grade) => sum + grade.nilai, 0) / grades.length
         : 0;
 
       return {
@@ -305,10 +380,10 @@ class AnalyticsService {
 
   static async getAssignmentCompletion(guruId) {
     const myAssignments = await Tugas.find({ guru_id: guruId }).select('_id judul kelas_id');
-    
+
     const completion = await Promise.all(myAssignments.map(async (tugas) => {
       const submissions = await Submission.find({ tugas_id: tugas._id });
-      
+
       return {
         tugas: tugas.judul,
         totalSubmissions: submissions.length,
@@ -321,13 +396,13 @@ class AnalyticsService {
 
   static async getAttendanceRate(guruId) {
     const myClasses = await Kelas.find({ guru_id: guruId }).select('_id nama_kelas');
-    
+
     const attendance = await Promise.all(myClasses.map(async (kelas) => {
       const sessions = await Kehadiran.distinct('session_id', { kelas_id: kelas._id });
       const totalAttendance = await Kehadiran.countDocuments({ kelas_id: kelas._id });
-      const presentAttendance = await Kehadiran.countDocuments({ 
-        kelas_id: kelas._id, 
-        status: 'Hadir' 
+      const presentAttendance = await Kehadiran.countDocuments({
+        kelas_id: kelas._id,
+        status: 'Hadir'
       });
 
       return {
@@ -348,15 +423,15 @@ class AnalyticsService {
   static async getMyAssignmentsCount(siswaId) {
     const myClasses = await Kelas.find({ siswa_ids: siswaId }).select('_id');
     const classIds = myClasses.map(k => k._id);
-    
+
     return await Tugas.countDocuments({ kelas_id: { $in: classIds } });
   }
 
   static async getMyAttendanceStats(siswaId) {
     const totalAttendance = await Kehadiran.countDocuments({ siswa_id: siswaId });
-    const presentAttendance = await Kehadiran.countDocuments({ 
-      siswa_id: siswaId, 
-      status: 'Hadir' 
+    const presentAttendance = await Kehadiran.countDocuments({
+      siswa_id: siswaId,
+      status: 'Hadir'
     });
 
     return {
@@ -368,7 +443,7 @@ class AnalyticsService {
 
   static async getMyGradeStats(siswaId) {
     const grades = await Submission.find({ siswa_id: siswaId });
-    
+
     if (grades.length === 0) {
       return { average: 0, total: 0, highest: 0, lowest: 0 };
     }
@@ -385,16 +460,16 @@ class AnalyticsService {
   static async getUpcomingDeadlines(siswaId, limit = 5) {
     const myClasses = await Kelas.find({ siswa_ids: siswaId }).select('_id');
     const classIds = myClasses.map(k => k._id);
-    
+
     const now = new Date();
     const upcoming = await Tugas.find({
       kelas_id: { $in: classIds },
       tanggal_deadline: { $gt: now }
     })
-    .sort({ tanggal_deadline: 1 })
-    .limit(limit)
-    .populate('kelas_id', 'nama_kelas')
-    .select('judul tanggal_deadline kelas_id');
+      .sort({ tanggal_deadline: 1 })
+      .limit(limit)
+      .populate('kelas_id', 'nama_kelas')
+      .select('judul tanggal_deadline kelas_id');
 
     return upcoming;
   }
@@ -409,15 +484,15 @@ class AnalyticsService {
   static async getChildrenPerformance(orangtuaId) {
     const Orangtua = mongoose.model('Orangtua');
     const orangtua = await Orangtua.findOne({ user_id: orangtuaId });
-    
+
     if (!orangtua) return [];
 
     const performance = await Promise.all(orangtua.siswa_ids.map(async (siswaId) => {
       const siswa = await User.findById(siswaId).select('nama');
       const grades = await Submission.find({ siswa_id: siswaId });
-      
-      const average = grades.length > 0 
-        ? grades.reduce((sum, grade) => sum + grade.nilai, 0) / grades.length 
+
+      const average = grades.length > 0
+        ? grades.reduce((sum, grade) => sum + grade.nilai, 0) / grades.length
         : 0;
 
       return {
@@ -430,26 +505,61 @@ class AnalyticsService {
     return performance;
   }
 
+  static async getChildrenAttendance(orangtuaId) {
+    const Orangtua = mongoose.model('Orangtua');
+    const orangtua = await Orangtua.findOne({ user_id: orangtuaId });
+
+    if (!orangtua || !orangtua.siswa_ids || orangtua.siswa_ids.length === 0) return 0;
+
+    const totalRecords = await Kehadiran.countDocuments({ siswa_id: { $in: orangtua.siswa_ids } });
+    const presentRecords = await Kehadiran.countDocuments({
+      siswa_id: { $in: orangtua.siswa_ids },
+      status: 'Hadir'
+    });
+
+    return totalRecords > 0 ? Math.round((presentRecords / totalRecords) * 100) : 0;
+  }
+
+  static async getRecentUpdates(orangtuaId, limit = 5) {
+    const Orangtua = mongoose.model('Orangtua');
+    const orangtua = await Orangtua.findOne({ user_id: orangtuaId });
+
+    if (!orangtua || !orangtua.siswa_ids || orangtua.siswa_ids.length === 0) return [];
+
+    const recentGrades = await Submission.find({ siswa_id: { $in: orangtua.siswa_ids } })
+      .sort({ updatedAt: -1 })
+      .limit(limit)
+      .populate('siswa_id', 'nama')
+      .populate('tugas_id', 'judul');
+
+    return recentGrades.map(g => ({
+      type: 'grade',
+      title: 'Nilai Baru',
+      description: `${g.siswa_id?.nama || 'Anak'} mendapat nilai ${g.nilai} di ${g.tugas_id?.judul || 'Tugas'}`,
+      timestamp: g.updatedAt
+    }));
+  }
+
   // Export data for reports
   static async exportData(type, filters = {}) {
     await connectDB();
-    
+
     switch (type) {
       case 'users':
         return await User.find(filters).select('-password');
-      
+
       case 'classes':
         return await Kelas.find(filters).populate('guru_id', 'nama email');
-      
+
       case 'assignments':
         return await Tugas.find(filters).populate('kelas_id', 'nama_kelas');
-      
+
       case 'attendance':
         return await Kehadiran.find(filters).populate('siswa_id', 'nama');
-      
+
       case 'grades':
         return await Submission.find(filters).populate('siswa_id', 'nama');
-      
+
       default:
         throw new Error('Invalid export type');
     }

@@ -1,11 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Users, 
-  BookOpen, 
-  FileText, 
+import {
+  TrendingUp,
+  TrendingDown,
+  Users,
+  BookOpen,
+  FileText,
   Calendar,
   Award,
   Clock,
@@ -243,14 +243,13 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
           <div className="space-y-4">
             {dashboardData.recentActivity?.map((activity, index) => (
               <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div className={`p-2 rounded-full ${
-                  activity.type === 'success' ? 'bg-green-100 text-green-600' :
+                <div className={`p-2 rounded-full ${activity.type === 'success' ? 'bg-green-100 text-green-600' :
                   activity.type === 'warning' ? 'bg-yellow-100 text-yellow-600' :
-                  'bg-blue-100 text-blue-600'
-                }`}>
+                    'bg-blue-100 text-blue-600'
+                  }`}>
                   {activity.type === 'success' ? <CheckCircle className="w-4 h-4" /> :
-                   activity.type === 'warning' ? <AlertTriangle className="w-4 h-4" /> :
-                   <Clock className="w-4 h-4" />}
+                    activity.type === 'warning' ? <AlertTriangle className="w-4 h-4" /> :
+                      <Clock className="w-4 h-4" />}
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -265,10 +264,10 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
                 </span>
               </div>
             )) || (
-              <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                No recent activity
-              </p>
-            )}
+                <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+                  No recent activity
+                </p>
+              )}
           </div>
         </div>
       </div>
@@ -280,47 +279,91 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
       {/* Teacher Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          title="My Classes"
+          title="Kelas Saya"
           value={dashboardData.myClasses || 0}
           icon={BookOpen}
           color="blue"
         />
         <MetricCard
-          title="Active Tasks"
-          value={dashboardData.activeTasks || 0}
-          icon={FileText}
+          title="Total Siswa"
+          value={dashboardData.myStudents || 0}
+          icon={Users}
           color="green"
         />
         <MetricCard
-          title="Average Grade"
-          value={`${dashboardData.averageGrade || 0}%`}
-          icon={Award}
+          title="Tugas Aktif"
+          value={dashboardData.myAssignments || 0}
+          icon={FileText}
           color="purple"
         />
         <MetricCard
-          title="Attendance Rate"
-          value={`${dashboardData.attendanceRate || 0}%`}
-          icon={Calendar}
-          color="yellow"
+          title="Siswa Berisiko"
+          value={dashboardData.atRiskStudents?.length || 0}
+          icon={AlertTriangle}
+          color="red"
         />
       </div>
 
-      {/* Student Performance */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Student Performance Overview
-        </h3>
-        <ResponsiveContainer width="100%" height={400}>
-          <BarChart data={dashboardData.studentPerformance || []}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-            <XAxis dataKey="student" stroke="#6B7280" fontSize={12} />
-            <YAxis stroke="#6B7280" fontSize={12} />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="grade" fill="#3B82F6" name="Grade" />
-            <Bar dataKey="attendance" fill="#10B981" name="Attendance %" />
-          </BarChart>
-        </ResponsiveContainer>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Class Performance Chart */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Performa Per Kelas
+          </h3>
+          {dashboardData.classPerformance && dashboardData.classPerformance.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={dashboardData.classPerformance.map(c => ({ kelas: c.kelas, nilai: c.averageGrade }))}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="kelas" stroke="#6B7280" fontSize={12} />
+                <YAxis stroke="#6B7280" fontSize={12} />
+                <Tooltip />
+                <Bar dataKey="nilai" fill="#3B82F6" name="Rata-rata Nilai" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+              Belum ada data performa kelas
+            </p>
+          )}
+        </div>
+
+        {/* At Risk Students Widget */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-red-500" />
+            Siswa Berisiko
+          </h3>
+          {dashboardData.atRiskStudents && dashboardData.atRiskStudents.length > 0 ? (
+            <div className="space-y-3">
+              {dashboardData.atRiskStudents.map((student, index) => (
+                <div key={index} className="flex items-start space-x-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <div className="p-2 rounded-full bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-400">
+                    <AlertTriangle className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {student.nama}
+                    </p>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {student.issues?.map((issue, i) => (
+                        <span key={i} className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded">
+                          {issue}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-2" />
+              <p className="text-gray-500 dark:text-gray-400">
+                Tidak ada siswa berisiko saat ini
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -331,25 +374,25 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
           title="My Classes"
-          value={dashboardData.enrolledClasses || 0}
+          value={dashboardData.myClasses || 0}
           icon={BookOpen}
           color="blue"
         />
         <MetricCard
           title="Pending Tasks"
-          value={dashboardData.pendingTasks || 0}
+          value={dashboardData.myAssignments || 0}
           icon={FileText}
           color="red"
         />
         <MetricCard
           title="My Average"
-          value={`${dashboardData.myAverage || 0}%`}
+          value={dashboardData.myGrades?.average || 0}
           icon={Award}
           color="purple"
         />
         <MetricCard
           title="Attendance"
-          value={`${dashboardData.myAttendance || 0}%`}
+          value={`${dashboardData.myAttendance?.rate || 0}%`}
           icon={Calendar}
           color="green"
         />
@@ -379,55 +422,97 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
     </div>
   );
 
-  const renderParentDashboard = () => (
-    <div className="space-y-6">
-      {/* Parent Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard
-          title="Children"
-          value={dashboardData.childrenCount || 0}
-          icon={Users}
-          color="blue"
-        />
-        <MetricCard
-          title="Average Grade"
-          value={`${dashboardData.childrenAverage || 0}%`}
-          icon={Award}
-          color="purple"
-        />
-        <MetricCard
-          title="Attendance Rate"
-          value={`${dashboardData.childrenAttendance || 0}%`}
-          icon={Calendar}
-          color="green"
-        />
-        <MetricCard
-          title="Pending Tasks"
-          value={dashboardData.childrenPendingTasks || 0}
-          icon={FileText}
-          color="red"
-        />
-      </div>
+  const renderParentDashboard = () => {
+    // Calculate average grade from childrenPerformance
+    const childrenPerf = dashboardData.childrenPerformance || [];
+    const avgGrade = childrenPerf.length > 0
+      ? Math.round(childrenPerf.reduce((sum, c) => sum + (c.averageGrade || 0), 0) / childrenPerf.length)
+      : 0;
 
-      {/* Children Performance */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Children Performance
-        </h3>
-        <ResponsiveContainer width="100%" height={400}>
-          <BarChart data={dashboardData.childrenPerformance || []}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-            <XAxis dataKey="child" stroke="#6B7280" fontSize={12} />
-            <YAxis stroke="#6B7280" fontSize={12} />
-            <Tooltip />
-            <Legend />
-            <Bar dataKey="grade" fill="#3B82F6" name="Grade" />
-            <Bar dataKey="attendance" fill="#10B981" name="Attendance %" />
-          </BarChart>
-        </ResponsiveContainer>
+    return (
+      <div className="space-y-6">
+        {/* Parent Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <MetricCard
+            title="Children"
+            value={dashboardData.childrenCount || 0}
+            icon={Users}
+            color="blue"
+          />
+          <MetricCard
+            title="Average Grade"
+            value={avgGrade}
+            icon={Award}
+            color="purple"
+          />
+          <MetricCard
+            title="Attendance Rate"
+            value={`${dashboardData.childrenAttendance || 0}%`}
+            icon={Calendar}
+            color="green"
+          />
+          <MetricCard
+            title="Recent Updates"
+            value={dashboardData.recentUpdates?.length || 0}
+            icon={FileText}
+            color="yellow"
+          />
+        </div>
+
+        {/* Children Performance */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+            Children Performance
+          </h3>
+          {childrenPerf.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={childrenPerf.map(c => ({ nama: c.nama, grade: c.averageGrade, total: c.totalGrades }))}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis dataKey="nama" stroke="#6B7280" fontSize={12} />
+                <YAxis stroke="#6B7280" fontSize={12} />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="grade" fill="#3B82F6" name="Rata-rata Nilai" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
+              Belum ada data performa anak
+            </p>
+          )}
+        </div>
+
+        {/* Recent Updates */}
+        {dashboardData.recentUpdates && dashboardData.recentUpdates.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              Update Terbaru
+            </h3>
+            <div className="space-y-3">
+              {dashboardData.recentUpdates.map((update, index) => (
+                <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                  <div className="p-2 rounded-full bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-400">
+                    <Award className="w-4 h-4" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {update.title}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {update.description}
+                    </p>
+                  </div>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {update.timestamp ? new Date(update.timestamp).toLocaleDateString('id-ID') : ''}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
