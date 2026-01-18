@@ -151,12 +151,8 @@ const nextConfig = {
     ignoreBuildErrors: false,
   },
 
-  // ESLint configuration
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: false,
-  },
+  // Turbopack configuration (to silence warning when using custom webpack)
+  turbopack: {},
 };
 
 export default nextConfig; 
