@@ -10,7 +10,7 @@ const Navbar = () => {
           <Link href="/" className="flex items-center gap-2 group">
             <span className="flex-shrink-0 flex items-center cursor-pointer transition-transform group-hover:scale-105">
               <Image
-                src="/assets/loginpage/logo segi panjang.png"
+                src="/assets/loginpage/logoNavbarBaru.png"
                 alt="SIAS"
                 width={110}
                 height={28}
