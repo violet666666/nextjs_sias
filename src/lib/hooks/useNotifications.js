@@ -26,10 +26,10 @@ export const useNotifications = () => {
       if (notifRes.ok && statsRes.ok) {
         const notifData = await notifRes.json();
         const statsData = await statsRes.json();
-        
+
         setNotifications(notifData.notifications || []);
         setStats(statsData);
-        
+
         return { notifications: notifData.notifications, pagination: notifData.pagination, stats: statsData };
       }
     } catch (error) {
@@ -47,9 +47,9 @@ export const useNotifications = () => {
         method: "PATCH",
         body: JSON.stringify({ id })
       });
-      
+
       if (res.ok) {
-        setNotifications(prev => 
+        setNotifications(prev =>
           prev.map(n => n._id === id ? { ...n, read: true, readAt: new Date() } : n)
         );
         setStats(prev => ({ ...prev, unread: Math.max(0, prev.unread - 1) }));
@@ -68,7 +68,7 @@ export const useNotifications = () => {
         method: "PATCH",
         body: JSON.stringify({ markAll: true })
       });
-      
+
       if (res.ok) {
         setNotifications(prev => prev.map(n => ({ ...n, read: true, readAt: new Date() })));
         setStats(prev => ({ ...prev, unread: 0 }));
@@ -86,12 +86,12 @@ export const useNotifications = () => {
       const res = await fetchWithAuth(`/api/notifications?id=${id}`, {
         method: "DELETE"
       });
-      
+
       if (res.ok) {
         const notification = notifications.find(n => n._id === id);
         setNotifications(prev => prev.filter(n => n._id !== id));
-        setStats(prev => ({ 
-          ...prev, 
+        setStats(prev => ({
+          ...prev,
           total: prev.total - 1,
           unread: notification?.read ? prev.unread : prev.unread - 1
         }));
@@ -109,7 +109,7 @@ export const useNotifications = () => {
       const res = await fetchWithAuth("/api/notifications?deleteRead=true", {
         method: "DELETE"
       });
-      
+
       if (res.ok) {
         const readCount = notifications.filter(n => n.read).length;
         setNotifications(prev => prev.filter(n => !n.read));
@@ -129,7 +129,7 @@ export const useNotifications = () => {
         method: "POST",
         body: JSON.stringify(notificationData)
       });
-      
+
       if (res.ok) {
         const newNotification = await res.json();
         // Refresh notifications if needed
@@ -142,52 +142,96 @@ export const useNotifications = () => {
     }
   }, [fetchNotifications]);
 
-  // Setup real-time notifications
+  // Setup real-time notifications with polling fallback for production
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
     const token = localStorage.getItem("token");
-    
+
     if (!user || !token) return;
 
-    // Initialize socket connection
-    const newSocket = io("http://localhost:3000", {
-      auth: { token },
-      transports: ["websocket"]
-    });
-
-    // Join user room
-    newSocket.emit("join_user", { userId: user.id || user._id });
-
-    // Listen for new notifications
-    newSocket.on("notification:new", (notification) => {
-      setNotifications(prev => [notification, ...prev]);
-      setStats(prev => ({ 
-        ...prev, 
-        total: prev.total + 1,
-        unread: prev.unread + 1
-      }));
-    });
-
-    // Listen for notification updates
-    newSocket.on("notification_update", (updatedNotification) => {
-      setNotifications(prev => 
-        prev.map(n => n._id === updatedNotification._id ? updatedNotification : n)
-      );
-    });
-
-    // Listen for notification deletion
-    newSocket.on("notification_delete", (notificationId) => {
-      setNotifications(prev => prev.filter(n => n._id !== notificationId));
-      setStats(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
-    });
-
-    setSocket(newSocket);
+    let pollingInterval = null;
+    let socketConnected = false;
 
     // Initial fetch
     fetchNotifications();
 
+    // Determine if we should use Socket.io or polling
+    const isProduction = typeof window !== 'undefined' &&
+      !window.location.hostname.includes('localhost') &&
+      !window.location.hostname.includes('127.0.0.1');
+
+    // For production (Vercel), use polling instead of Socket.io
+    if (isProduction) {
+      console.log('Production mode: Using polling for notifications (30s interval)');
+      pollingInterval = setInterval(() => {
+        fetchNotifications();
+      }, 30000); // Poll every 30 seconds
+    } else {
+      // Development mode: Try Socket.io
+      try {
+        const newSocket = io("http://localhost:3000", {
+          auth: { token },
+          transports: ["websocket"],
+          timeout: 5000,
+          reconnectionAttempts: 3
+        });
+
+        newSocket.on("connect", () => {
+          console.log('Socket.io connected for notifications');
+          socketConnected = true;
+        });
+
+        newSocket.on("connect_error", (error) => {
+          console.log('Socket.io connection failed, falling back to polling:', error.message);
+          if (!socketConnected && !pollingInterval) {
+            pollingInterval = setInterval(() => {
+              fetchNotifications();
+            }, 30000);
+          }
+        });
+
+        // Join user room
+        newSocket.emit("join_user", { userId: user.id || user._id });
+
+        // Listen for new notifications
+        newSocket.on("notification:new", (notification) => {
+          setNotifications(prev => [notification, ...prev]);
+          setStats(prev => ({
+            ...prev,
+            total: prev.total + 1,
+            unread: prev.unread + 1
+          }));
+        });
+
+        // Listen for notification updates
+        newSocket.on("notification_update", (updatedNotification) => {
+          setNotifications(prev =>
+            prev.map(n => n._id === updatedNotification._id ? updatedNotification : n)
+          );
+        });
+
+        // Listen for notification deletion
+        newSocket.on("notification_delete", (notificationId) => {
+          setNotifications(prev => prev.filter(n => n._id !== notificationId));
+          setStats(prev => ({ ...prev, total: Math.max(0, prev.total - 1) }));
+        });
+
+        setSocket(newSocket);
+
+        return () => {
+          newSocket.disconnect();
+          if (pollingInterval) clearInterval(pollingInterval);
+        };
+      } catch (error) {
+        console.log('Socket.io initialization failed, using polling:', error);
+        pollingInterval = setInterval(() => {
+          fetchNotifications();
+        }, 30000);
+      }
+    }
+
     return () => {
-      newSocket.disconnect();
+      if (pollingInterval) clearInterval(pollingInterval);
     };
   }, [fetchNotifications]);
 

@@ -90,25 +90,66 @@ const CpanelNavbar = ({ onRoleChange }) => {
     }
   }, [debouncedSearch]);
 
-  // Fetch notifications
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      setNotifLoading(true);
-      try {
-        const res = await fetchWithAuth("/api/notifications?limit=5");
-        if (res.ok) {
-          const data = await res.json();
-          setNotifications(data.notifications || []);
-        }
-      } catch (error) {
-        console.error("Error fetching notifications:", error);
-      } finally {
-        setNotifLoading(false);
+  // Fetch notifications with polling for production
+  const fetchNotifications = async () => {
+    setNotifLoading(true);
+    try {
+      const res = await fetchWithAuth("/api/notifications?limit=10");
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      setNotifLoading(false);
+    }
+  };
 
+  useEffect(() => {
+    // Initial fetch
     fetchNotifications();
+
+    // Setup polling for production (Vercel doesn't support WebSocket)
+    const isProduction = typeof window !== 'undefined' &&
+      !window.location.hostname.includes('localhost') &&
+      !window.location.hostname.includes('127.0.0.1');
+
+    let pollingInterval = null;
+    if (isProduction) {
+      // Poll every 30 seconds in production
+      pollingInterval = setInterval(fetchNotifications, 30000);
+    }
+
+    return () => {
+      if (pollingInterval) clearInterval(pollingInterval);
+    };
   }, []);
+
+  // Mark single notification as read
+  const markAsRead = async (notifId) => {
+    try {
+      await fetchWithAuth("/api/notifications", {
+        method: "PATCH",
+        body: JSON.stringify({ id: notifId })
+      });
+      setNotifications(prev =>
+        prev.map(n => n._id === notifId ? { ...n, read: true } : n)
+      );
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    try {
+      await fetchWithAuth("/api/notifications/mark-all-read", { method: "POST" });
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (error) {
+      console.error("Error marking all as read:", error);
+    }
+  };
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -173,7 +214,7 @@ const CpanelNavbar = ({ onRoleChange }) => {
               </div>
             )}
           </div>
-          
+
           {/* Search Results Dropdown */}
           {searchResults.length > 0 && (
             <div className="absolute z-50 mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-y-auto">
@@ -249,21 +290,103 @@ const CpanelNavbar = ({ onRoleChange }) => {
               )}
             </button>
             {notifOpen && (
-              <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
-                <div className="p-4 border-b border-gray-100 dark:border-gray-700 font-bold">Notifikasi</div>
+              <div className="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                {/* Header */}
+                <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                  <span className="font-bold text-gray-900 dark:text-gray-100">Notifikasi</span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={markAllAsRead}
+                      className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                    >
+                      Tandai semua dibaca
+                    </button>
+                  )}
+                </div>
+
+                {/* Notification List */}
                 {notifLoading ? (
-                  <div className="p-4 text-gray-500">Memuat...</div>
+                  <div className="p-4 text-gray-500 text-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
+                    <span className="text-sm mt-2 block">Memuat...</span>
+                  </div>
                 ) : notifications.length === 0 ? (
-                  <div className="p-4 text-gray-500">Tidak ada notifikasi.</div>
+                  <div className="p-8 text-gray-500 text-center">
+                    <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    <span className="text-sm">Tidak ada notifikasi</span>
+                  </div>
                 ) : (
                   <ul className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
                     {notifications.map((notif) => (
-                      <li key={notif._id} className={`p-4 ${notif.read ? '' : 'bg-blue-50 dark:bg-blue-900/30'}`}>
-                        <div className="font-semibold">{notif.title || notif.text || 'Notifikasi'}</div>
-                        <div className="text-xs text-gray-500 mt-1">{notif.createdAt ? new Date(notif.createdAt).toLocaleString() : ''}</div>
+                      <li
+                        key={notif._id}
+                        onClick={() => !notif.read && markAsRead(notif._id)}
+                        className={`p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${notif.read ? '' : 'bg-blue-50 dark:bg-blue-900/30'
+                          }`}
+                      >
+                        <div className="flex items-start space-x-3">
+                          {/* Notification Type Icon */}
+                          <div className={`p-2 rounded-full flex-shrink-0 ${notif.type === 'task' || notif.type === 'assignment' ? 'bg-indigo-100 text-indigo-600' :
+                              notif.type === 'grade' ? 'bg-green-100 text-green-600' :
+                                notif.type === 'attendance' ? 'bg-yellow-100 text-yellow-600' :
+                                  notif.type === 'announcement' ? 'bg-purple-100 text-purple-600' :
+                                    'bg-blue-100 text-blue-600'
+                            }`}>
+                            {notif.type === 'task' || notif.type === 'assignment' ? (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                              </svg>
+                            ) : notif.type === 'grade' ? (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                              </svg>
+                            ) : notif.type === 'attendance' ? (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                              </svg>
+                            )}
+                          </div>
+
+                          {/* Notification Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">
+                              {notif.title || 'Notifikasi'}
+                            </div>
+                            <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                              {notif.message || notif.text || ''}
+                            </div>
+                            <div className="text-xs text-gray-400 mt-1">
+                              {notif.createdAt ? new Date(notif.createdAt).toLocaleString('id-ID') : ''}
+                            </div>
+                          </div>
+
+                          {/* Unread indicator */}
+                          {!notif.read && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-2"></div>
+                          )}
+                        </div>
                       </li>
                     ))}
                   </ul>
+                )}
+
+                {/* Footer */}
+                {notifications.length > 0 && (
+                  <div className="p-3 border-t border-gray-100 dark:border-gray-700">
+                    <Link
+                      href="/cpanel/notifications"
+                      className="block text-center text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400"
+                      onClick={() => setNotifOpen(false)}
+                    >
+                      Lihat semua notifikasi
+                    </Link>
+                  </div>
                 )}
               </div>
             )}
