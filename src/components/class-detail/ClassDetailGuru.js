@@ -81,33 +81,71 @@ export default function ClassDetailGuru({ kelasId }) {
 
   // Export to PDF (Leger Nilai)
   const handlePrintLeger = () => {
-    const doc = new jsPDF();
-    doc.setFontSize(16);
-    doc.text(`Leger Nilai - ${kelas.nama_kelas || kelas.namaKelas}`, 14, 15);
-    doc.setFontSize(10);
-    doc.text(`Tahun Ajaran: ${kelas.tahun_ajaran || '-'}`, 14, 22);
-    doc.text(`Wali Kelas: ${kelas.guru_id?.nama || '-'}`, 14, 28);
+    try {
+      if (!students || students.length === 0) {
+        setToast({ message: 'Tidak ada data siswa untuk dicetak', type: 'error' });
+        return;
+      }
 
-    const tableData = students.map((s, idx) => {
-      const nilaiSiswa = nilai.filter(n => n.siswa_id === s._id || n.siswa_id?._id === s._id);
-      const totalN = nilaiSiswa.reduce((acc, n) => acc + (n.nilai || 0), 0);
-      const avgN = nilaiSiswa.length ? Math.round(totalN / nilaiSiswa.length) : 0;
-      const hadir = attendance.filter(k => (k.siswa_id === s._id || k.siswa_id?._id === s._id) && k.status === 'Hadir').length;
-      const alfa = attendance.filter(k => (k.siswa_id === s._id || k.siswa_id?._id === s._id) && k.status === 'Alfa').length;
-      return [idx + 1, s.nama, s.email || '-', avgN, hadir, alfa];
-    });
+      const doc = new jsPDF();
 
-    doc.autoTable({
-      startY: 35,
-      head: [['No', 'Nama Siswa', 'Email', 'Nilai Rata-rata', 'Hadir', 'Alfa']],
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [59, 130, 246] },
-      styles: { fontSize: 9 }
-    });
+      // Header
+      doc.setFontSize(16);
+      doc.text(`Leger Nilai - ${kelas.nama_kelas || kelas.namaKelas || 'Tanpa Nama'}`, 14, 15);
 
-    doc.save(`leger_nilai_${kelas.nama_kelas || kelasId}.pdf`);
-    setToast({ message: 'Leger nilai berhasil diunduh', type: 'success' });
+      doc.setFontSize(10);
+      doc.text(`Tahun Ajaran: ${kelas.tahun_ajaran || '-'}`, 14, 22);
+      doc.text(`Wali Kelas: ${kelas.guru_id?.nama || '-'}`, 14, 28);
+      doc.text(`Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}`, 14, 34);
+
+      const tableData = students.map((s, idx) => {
+        const nilaiSiswa = nilai.filter(n => n.siswa_id === s._id || n.siswa_id?._id === s._id);
+        const totalN = nilaiSiswa.reduce((acc, n) => acc + (n.nilai || 0), 0);
+        const avgN = nilaiSiswa.length ? Math.round(totalN / nilaiSiswa.length) : 0;
+        const hadir = attendance.filter(k => (k.siswa_id === s._id || k.siswa_id?._id === s._id) && k.status === 'Hadir').length;
+        const izin = attendance.filter(k => (k.siswa_id === s._id || k.siswa_id?._id === s._id) && k.status === 'Izin').length;
+        const sakit = attendance.filter(k => (k.siswa_id === s._id || k.siswa_id?._id === s._id) && k.status === 'Sakit').length;
+        const alfa = attendance.filter(k => (k.siswa_id === s._id || k.siswa_id?._id === s._id) && k.status === 'Alfa').length;
+
+        return [
+          idx + 1,
+          s.nama || 'Tanpa Nama',
+          s.email || '-',
+          avgN,
+          hadir,
+          sakit,
+          izin,
+          alfa
+        ];
+      });
+
+      if (typeof doc.autoTable !== 'function') {
+        throw new Error('Plugin autoTable tidak dimuat dengan benar. Coba refresh halaman.');
+      }
+
+      doc.autoTable({
+        startY: 40,
+        head: [['No', 'Nama Siswa', 'Email', 'Rata-rata', 'Hadir', 'Sakit', 'Izin', 'Alfa']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [59, 130, 246], halign: 'center' },
+        styles: { fontSize: 9, cellPadding: 2 },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 10 },
+          3: { halign: 'center' },
+          4: { halign: 'center' },
+          5: { halign: 'center' },
+          6: { halign: 'center' },
+          7: { halign: 'center' }
+        }
+      });
+
+      doc.save(`leger_nilai_${kelas.nama_kelas || kelasId}_${new Date().toISOString().split('T')[0]}.pdf`);
+      setToast({ message: 'Leger nilai berhasil diunduh', type: 'success' });
+    } catch (err) {
+      console.error('Gagal mencetak leger:', err);
+      setToast({ message: `Gagal mencetak: ${err.message}`, type: 'error' });
+    }
   };
 
   const TABS = [
@@ -169,8 +207,8 @@ export default function ClassDetailGuru({ kelasId }) {
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.key
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
               {tab.label}

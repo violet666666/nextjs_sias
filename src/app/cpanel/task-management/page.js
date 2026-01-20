@@ -10,12 +10,12 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Modal from "@/components/ui/Modal";
 import ProtectedRoute from "@/components/common/ProtectedRoute";
-import { 
-  Plus, 
-  FileText, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Plus,
+  FileText,
+  Clock,
+  CheckCircle,
+  XCircle,
   Users,
   Eye,
   Edit,
@@ -30,33 +30,35 @@ export default function TaskManagementPage() {
   const [user, setUser] = useState(null);
   const [selectedClass, setSelectedClass] = useState(null);
   const [classes, setClasses] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showGradeModal, setShowGradeModal] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [toast, setToast] = useState({ message: "", type: "success" });
 
   // Real-time hooks
-  const { 
-    tasks, 
-    submissions, 
-    loading, 
-    error, 
-    createTask, 
-    submitTask, 
-    updateGrade 
+  const {
+    tasks,
+    submissions,
+    loading,
+    error,
+    createTask,
+    submitTask,
+    updateGrade
   } = useRealTimeTasks(selectedClass);
 
-  const { 
-    onlineUsers, 
-    userActivity, 
-    logActivity 
+  const {
+    onlineUsers,
+    userActivity,
+    logActivity
   } = useUserStatus();
 
   // Form states
   const [taskForm, setTaskForm] = useState({
     judul: "",
     deskripsi: "",
-    tanggal_deadline: ""
+    tanggal_deadline: "",
+    mapel_id: ""
   });
 
   const [gradeForm, setGradeForm] = useState({
@@ -69,10 +71,10 @@ export default function TaskManagementPage() {
     if (storedUser) {
       const userData = JSON.parse(storedUser);
       setUser(userData);
-      
+
       // Log activity
       logActivity('view_task_management', { page: 'task_management' });
-      
+
       // Fetch classes for teacher
       if (userData.role === "guru") {
         fetchClasses(userData.id || userData._id);
@@ -100,21 +102,53 @@ export default function TaskManagementPage() {
     }
   };
 
+  // Fetch subjects when class changes
+  const fetchSubjects = async (classId) => {
+    if (!classId) {
+      setSubjects([]);
+      return;
+    }
+    try {
+      const res = await fetchWithAuth(`/api/subjects?kelas_id=${classId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setSubjects(data);
+        // Auto-select first subject if available
+        if (data.length > 0) {
+          setTaskForm(prev => ({ ...prev, mapel_id: data[0]._id }));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch subjects:', error);
+    }
+  };
+
+  // Fetch subjects when selectedClass changes
+  useEffect(() => {
+    if (selectedClass) {
+      fetchSubjects(selectedClass);
+    }
+  }, [selectedClass]);
+
   const handleCreateTask = async (e) => {
     e.preventDefault();
     if (!selectedClass) {
       setToast({ message: "Pilih kelas terlebih dahulu", type: "error" });
       return;
     }
+    if (!taskForm.mapel_id) {
+      setToast({ message: "Pilih mata pelajaran terlebih dahulu", type: "error" });
+      return;
+    }
 
     const success = await createTask(taskForm);
     if (success) {
       setShowCreateModal(false);
-      setTaskForm({ judul: "", deskripsi: "", tanggal_deadline: "" });
+      setTaskForm({ judul: "", deskripsi: "", tanggal_deadline: "", mapel_id: "" });
       setToast({ message: "Tugas berhasil dibuat", type: "success" });
       logActivity('create_task', { classId: selectedClass, taskTitle: taskForm.judul });
     } else {
-      setToast({ message: "Gagal membuat tugas", type: "error" });
+      setToast({ message: "Gagal membuat tugas. Pastikan semua field terisi.", type: "error" });
     }
   };
 
@@ -128,9 +162,9 @@ export default function TaskManagementPage() {
       setGradeForm({ nilai: "", feedback: "" });
       setSelectedSubmission(null);
       setToast({ message: "Nilai berhasil diperbarui", type: "success" });
-      logActivity('grade_submission', { 
-        submissionId: selectedSubmission._id, 
-        nilai: gradeForm.nilai 
+      logActivity('grade_submission', {
+        submissionId: selectedSubmission._id,
+        nilai: gradeForm.nilai
       });
     } else {
       setToast({ message: "Gagal memperbarui nilai", type: "error" });
@@ -139,9 +173,9 @@ export default function TaskManagementPage() {
 
   const openGradeModal = (submission) => {
     setSelectedSubmission(submission);
-    setGradeForm({ 
-      nilai: submission.nilai || "", 
-      feedback: submission.feedback || "" 
+    setGradeForm({
+      nilai: submission.nilai || "",
+      feedback: submission.feedback || ""
     });
     setShowGradeModal(true);
   };
@@ -150,7 +184,7 @@ export default function TaskManagementPage() {
     const deadline = new Date(task.tanggal_deadline);
     const now = new Date();
     const submission = submissions.find(s => s.tugas_id === task._id);
-    
+
     if (submission) {
       return { status: "submitted", icon: CheckCircle, color: "text-green-600" };
     } else if (deadline < now) {
@@ -163,12 +197,12 @@ export default function TaskManagementPage() {
   if (!user) return <LoadingSpinner />;
 
   return (
-    <ProtectedRoute requiredRoles={['admin','guru']}>
+    <ProtectedRoute requiredRoles={['admin', 'guru']}>
       <div className="max-w-6xl mx-auto py-8">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Manajemen Tugas</h1>
-          <Button 
-            onClick={() => setShowCreateModal(true)} 
+          <Button
+            onClick={() => setShowCreateModal(true)}
             color="primary"
             icon={<Plus className="w-4 h-4" />}
           >
@@ -187,7 +221,7 @@ export default function TaskManagementPage() {
               {onlineUsers.length}
             </p>
           </div>
-          
+
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center">
               <FileText className="w-5 h-5 text-green-600 mr-2" />
@@ -197,7 +231,7 @@ export default function TaskManagementPage() {
               {tasks.length}
             </p>
           </div>
-          
+
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center">
               <CheckCircle className="w-5 h-5 text-blue-600 mr-2" />
@@ -324,14 +358,14 @@ export default function TaskManagementPage() {
           <Modal open={showCreateModal} onClose={() => setShowCreateModal(false)}>
             <form onSubmit={handleCreateTask} className="space-y-4 p-4">
               <h2 className="text-xl font-bold mb-4">Buat Tugas Baru</h2>
-              
+
               <Input
                 label="Judul Tugas"
                 value={taskForm.judul}
                 onChange={(e) => setTaskForm(prev => ({ ...prev, judul: e.target.value }))}
                 required
               />
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Deskripsi
@@ -344,7 +378,7 @@ export default function TaskManagementPage() {
                   required
                 />
               </div>
-              
+
               <Input
                 label="Deadline"
                 type="datetime-local"
@@ -352,11 +386,35 @@ export default function TaskManagementPage() {
                 onChange={(e) => setTaskForm(prev => ({ ...prev, tanggal_deadline: e.target.value }))}
                 required
               />
-              
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Mata Pelajaran
+                </label>
+                <select
+                  value={taskForm.mapel_id}
+                  onChange={(e) => setTaskForm(prev => ({ ...prev, mapel_id: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                  required
+                >
+                  <option value="">Pilih Mata Pelajaran</option>
+                  {subjects.map((subj) => (
+                    <option key={subj._id} value={subj._id}>
+                      {subj.nama || subj.nama_mapel}
+                    </option>
+                  ))}
+                </select>
+                {subjects.length === 0 && (
+                  <p className="text-sm text-yellow-600 mt-1">
+                    Tidak ada mata pelajaran untuk kelas ini. Hubungi admin untuk menambahkan.
+                  </p>
+                )}
+              </div>
+
               <div className="flex justify-end space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setShowCreateModal(false)}
                 >
                   Batal
@@ -374,7 +432,7 @@ export default function TaskManagementPage() {
           <Modal open={showGradeModal} onClose={() => setShowGradeModal(false)}>
             <form onSubmit={handleGradeSubmission} className="space-y-4 p-4">
               <h2 className="text-xl font-bold mb-4">Nilai Tugas</h2>
-              
+
               <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded">
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   <strong>Siswa:</strong> {selectedSubmission.siswa_id?.nama}
@@ -383,7 +441,7 @@ export default function TaskManagementPage() {
                   <strong>Tugas:</strong> {selectedSubmission.tugas_id?.judul}
                 </p>
               </div>
-              
+
               <Input
                 label="Nilai"
                 type="number"
@@ -393,7 +451,7 @@ export default function TaskManagementPage() {
                 onChange={(e) => setGradeForm(prev => ({ ...prev, nilai: e.target.value }))}
                 required
               />
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Feedback
@@ -405,11 +463,11 @@ export default function TaskManagementPage() {
                   rows={3}
                 />
               </div>
-              
+
               <div className="flex justify-end space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setShowGradeModal(false)}
                 >
                   Batal
@@ -422,10 +480,10 @@ export default function TaskManagementPage() {
           </Modal>
         )}
 
-        <Toast 
-          message={toast.message} 
-          type={toast.type} 
-          onClose={() => setToast({ message: "", type: "success" })} 
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast({ message: "", type: "success" })}
         />
       </div>
     </ProtectedRoute>

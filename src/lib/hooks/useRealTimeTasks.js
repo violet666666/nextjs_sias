@@ -13,12 +13,14 @@ export const useRealTimeTasks = (classId = null) => {
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem("user"));
     const token = localStorage.getItem("token");
-    
+
     if (!user || !token) return;
 
-    const newSocket = io("http://localhost:3000", {
+    const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'), {
       auth: { token },
-      transports: ["websocket"]
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: 3,
+      timeout: 5000
     });
 
     // Join user room
@@ -46,8 +48,8 @@ export const useRealTimeTasks = (classId = null) => {
 
     // Listen for grade updates
     newSocket.on("grade_update", (updatedSubmission) => {
-      setSubmissions(prev => 
-        prev.map(sub => 
+      setSubmissions(prev =>
+        prev.map(sub =>
           sub._id === updatedSubmission._id ? updatedSubmission : sub
         )
       );
@@ -63,7 +65,7 @@ export const useRealTimeTasks = (classId = null) => {
   // Fetch initial tasks
   const fetchTasks = useCallback(async () => {
     if (!classId) return;
-    
+
     setLoading(true);
     setError(null);
     try {
@@ -84,7 +86,7 @@ export const useRealTimeTasks = (classId = null) => {
   // Fetch submissions
   const fetchSubmissions = useCallback(async () => {
     if (!classId) return;
-    
+
     try {
       const res = await fetchWithAuth(`/api/submissions?kelas_id=${classId}`);
       if (res.ok) {
@@ -98,8 +100,8 @@ export const useRealTimeTasks = (classId = null) => {
 
   // Create new task (for teachers)
   const createTask = useCallback(async (taskData) => {
-    if (!socket || !classId) return;
-    
+    if (!classId) return false;
+
     try {
       // Optimistic update
       const optimisticTask = {
@@ -111,8 +113,10 @@ export const useRealTimeTasks = (classId = null) => {
       };
       setTasks(prev => [optimisticTask, ...prev]);
 
-      // Send to server via socket
-      socket.emit("new_task_created", { classId, taskData });
+      // Send to server via socket (if connected)
+      if (socket?.connected) {
+        socket.emit("new_task_created", { classId, taskData });
+      }
 
       // Also send via API for persistence
       const res = await fetchWithAuth("/api/tugas", {
@@ -140,7 +144,7 @@ export const useRealTimeTasks = (classId = null) => {
   // Submit task (for students)
   const submitTask = useCallback(async (taskId, submissionData) => {
     if (!socket) return;
-    
+
     try {
       // Optimistic update
       const optimisticSubmission = {
@@ -181,12 +185,12 @@ export const useRealTimeTasks = (classId = null) => {
   // Update grade (for teachers)
   const updateGrade = useCallback(async (submissionId, gradeData) => {
     if (!socket) return;
-    
+
     try {
       // Optimistic update
-      setSubmissions(prev => 
-        prev.map(sub => 
-          sub._id === submissionId 
+      setSubmissions(prev =>
+        prev.map(sub =>
+          sub._id === submissionId
             ? { ...sub, nilai: gradeData.nilai, feedback: gradeData.feedback, isOptimistic: true }
             : sub
         )
@@ -207,9 +211,9 @@ export const useRealTimeTasks = (classId = null) => {
       }
 
       // Remove optimistic flag and let socket update with real data
-      setSubmissions(prev => 
-        prev.map(sub => 
-          sub._id === submissionId 
+      setSubmissions(prev =>
+        prev.map(sub =>
+          sub._id === submissionId
             ? { ...sub, isOptimistic: false }
             : sub
         )
@@ -218,9 +222,9 @@ export const useRealTimeTasks = (classId = null) => {
       return true;
     } catch (err) {
       // Revert optimistic update on error
-      setSubmissions(prev => 
-        prev.map(sub => 
-          sub._id === submissionId 
+      setSubmissions(prev =>
+        prev.map(sub =>
+          sub._id === submissionId
             ? { ...sub, nilai: sub.nilai, feedback: sub.feedback, isOptimistic: false }
             : sub
         )

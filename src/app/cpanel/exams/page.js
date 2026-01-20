@@ -14,6 +14,15 @@ export default function ExamManagementPage() {
     const [exams, setExams] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
+
+    // Get user role from localStorage as fallback (session may be slow to load)
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            setCurrentUser(JSON.parse(storedUser));
+        }
+    }, []);
 
     // Data for Form
     const [classes, setClasses] = useState([]);
@@ -150,7 +159,7 @@ export default function ExamManagementPage() {
                     <p className="text-gray-500 text-sm">Kelola Ulangan Harian, UTS, dan UAS</p>
                 </div>
 
-                {session?.user?.role === 'guru' && (
+                {(session?.user?.role === 'guru' || session?.user?.role === 'admin' || currentUser?.role === 'guru' || currentUser?.role === 'admin') && (
                     <button
                         onClick={() => setShowModal(true)}
                         className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"

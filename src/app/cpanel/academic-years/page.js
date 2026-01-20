@@ -9,12 +9,21 @@ export default function AcademicYearPage() {
     const [years, setYears] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
     const [formData, setFormData] = useState({
         name: "",
         semester: SEMESTERS.GANJIL,
         startDate: "",
         endDate: "",
     });
+
+    // Get user role from localStorage
+    useEffect(() => {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+            setCurrentUser(JSON.parse(storedUser));
+        }
+    }, []);
 
     useEffect(() => {
         fetchYears();
@@ -62,15 +71,17 @@ export default function AcademicYearPage() {
                 <h1 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
                     Tahun Ajaran
                 </h1>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Tambah Tahun Ajaran
-                </button>
+                {currentUser?.role === 'admin' && (
+                    <button
+                        onClick={() => setShowModal(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Tambah Tahun Ajaran
+                    </button>
+                )}
             </div>
 
             <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">

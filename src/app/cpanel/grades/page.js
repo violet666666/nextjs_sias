@@ -33,10 +33,10 @@ export default function GradesPage() {
     setError('');
     try {
       // Admin and Guru see all grades, Siswa sees their own
-      const endpoint = currentUser.role === 'admin' || currentUser.role === 'guru' 
-        ? '/api/grades/all' 
+      const endpoint = currentUser.role === 'admin' || currentUser.role === 'guru'
+        ? '/api/grades/all'
         : `/api/grades/student/${currentUser.id || currentUser._id}`;
-        
+
       const res = await fetchWithAuth(endpoint);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
@@ -54,30 +54,37 @@ export default function GradesPage() {
       setToast({ message: "Tidak ada data nilai untuk diekspor", type: "error" });
       return;
     }
-    
+
     setExporting(true);
     try {
-      // Transform data for PDF export
+      // Transform data for PDF export - use student name from nilai data if available
       const gradesData = nilai.map(submission => ({
-        siswa: { nama: user.nama },
+        siswa: {
+          nama: submission.siswa_id?.nama || submission.siswa?.nama || user?.nama || 'Siswa'
+        },
         nilai: submission.nilai,
-        feedback: submission.feedback,
-        submitted_at: submission.tanggal_kumpul
+        feedback: submission.feedback || '-',
+        submitted_at: submission.tanggal_kumpul || submission.createdAt
       }));
-      
+
+      // Validate autoTable is available
       const doc = await exportGradesPDF(
         gradesData,
-        'Laporan Nilai Pribadi',
+        user?.kelas_id?.nama_kelas || 'Laporan Nilai Pribadi',
         'Semua Tugas'
       );
-      
-      const filename = `laporan-nilai-${user.nama}-${new Date().toISOString().split('T')[0]}.pdf`;
+
+      if (!doc) {
+        throw new Error('Gagal membuat dokumen PDF');
+      }
+
+      const filename = `laporan-nilai-${user?.nama || 'siswa'}-${new Date().toISOString().split('T')[0]}.pdf`;
       downloadPDF(doc, filename);
-      
+
       setToast({ message: "PDF berhasil diunduh!", type: "success" });
     } catch (error) {
-      console.error('Export error:', error);
-      setToast({ message: "Gagal mengekspor PDF", type: "error" });
+      console.error('Export PDF error:', error);
+      setToast({ message: `Gagal mengekspor PDF: ${error.message}`, type: "error" });
     } finally {
       setExporting(false);
     }
@@ -108,7 +115,7 @@ export default function GradesPage() {
   if (error) return <div className="text-red-500">{error}</div>;
 
   return (
-    <ProtectedRoute requiredRoles={['admin','guru','siswa','orangtua']}>
+    <ProtectedRoute requiredRoles={['admin', 'guru', 'siswa', 'orangtua']}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6 transition-colors duration-300">
         <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: "" })} />
         <div className="max-w-6xl mx-auto">
@@ -135,7 +142,7 @@ export default function GradesPage() {
               {exportingExcel ? "Mengekspor..." : "Export Excel"}
             </button>
           </div>
-          
+
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden transition-colors duration-300">
             <div className="overflow-x-auto">
               <table className="min-w-full">
@@ -161,12 +168,11 @@ export default function GradesPage() {
                           {n.tugas_id?.judul || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            n.nilai >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                            n.nilai >= 80 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                            n.nilai >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                            'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
-                          }`}>
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${n.nilai >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                              n.nilai >= 80 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                                n.nilai >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                  'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            }`}>
                             {n.nilai ?? '-'}
                           </span>
                         </td>
