@@ -148,7 +148,12 @@ export default function GradesPage() {
               <table className="min-w-full">
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
+                    {(user?.role === 'admin' || user?.role === 'guru') && (
+                      <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Siswa</th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Tugas</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Kelas</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Mapel</th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Nilai</th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Feedback</th>
                     <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">Tanggal Kumpul</th>
@@ -157,21 +162,32 @@ export default function GradesPage() {
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {nilai.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="text-center py-8 text-gray-500 dark:text-gray-400">
+                      <td colSpan={user?.role === 'admin' || user?.role === 'guru' ? 7 : 6} className="text-center py-8 text-gray-500 dark:text-gray-400">
                         Belum ada data nilai
                       </td>
                     </tr>
                   ) : (
                     nilai.map((n) => (
                       <tr key={n._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
+                        {(user?.role === 'admin' || user?.role === 'guru') && (
+                          <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">
+                            {n.siswa_id?.nama || n.siswa?.nama || '-'}
+                          </td>
+                        )}
                         <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">
                           {n.tugas_id?.judul || '-'}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">
+                          {n.tugas_id?.kelas_id?.nama_kelas || n.kelas?.nama_kelas || '-'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">
+                          {n.tugas_id?.mapel_id?.nama_mapel || n.mapel?.nama_mapel || '-'}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${n.nilai >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                              n.nilai >= 80 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                                n.nilai >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
-                                  'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                            n.nilai >= 80 ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                              n.nilai >= 70 ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                                'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
                             }`}>
                             {n.nilai ?? '-'}
                           </span>

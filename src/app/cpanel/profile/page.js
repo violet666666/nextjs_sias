@@ -48,7 +48,9 @@ export default function ProfilePage() {
     try {
       const res = await fetchWithAuth(`/api/users/profile`);
       if (!res.ok) throw new Error("Gagal mengambil data profil");
-      const data = await res.json();
+      const responseData = await res.json();
+      // Handle both wrapped {success: true, ...data} and direct user object response formats
+      const data = responseData.success !== undefined ? responseData : responseData;
       setFormData({
         nama: data.nama || '',
         email: data.email || '',
@@ -56,6 +58,10 @@ export default function ProfilePage() {
         address: data.alamat || '',
         birthDate: data.tanggal_lahir ? data.tanggal_lahir.split('T')[0] : ''
       });
+      // Update user state with profile data for role-specific displays
+      if (data._id || data.id) {
+        setUser(prev => ({ ...prev, ...data }));
+      }
     } catch (err) {
       setMessage({ type: 'error', text: err.message || 'Gagal mengambil data profil' });
     } finally {
@@ -158,7 +164,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <ProtectedRoute requiredRoles={['admin','guru','siswa','orangtua','parent']}>
+    <ProtectedRoute requiredRoles={['admin', 'guru', 'siswa', 'orangtua', 'parent']}>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 transition-colors duration-300">
         <div className="max-w-5xl mx-auto px-4 sm:px-8 lg:px-12">
           {/* Header */}
@@ -169,11 +175,10 @@ export default function ProfilePage() {
 
           {/* Message Alert */}
           {message.text && (
-            <div className={`mb-6 p-4 rounded-lg ${
-              message.type === 'success' 
-                ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700' 
-                : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-700'
-            }`}>
+            <div className={`mb-6 p-4 rounded-lg ${message.type === 'success'
+              ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border border-green-200 dark:border-green-700'
+              : 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-700'
+              }`}>
               {message.text}
             </div>
           )}
@@ -302,18 +307,41 @@ export default function ProfilePage() {
                 <div className="space-y-3">
                   <div>
                     <span className="text-sm text-gray-500 dark:text-gray-400">Role</span>
-                    <p className="font-medium text-gray-900 dark:text-gray-100 capitalize">{user.role}</p>
+                    <p className="font-medium text-gray-900 dark:text-gray-100 capitalize">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${user.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
+                        user.role === 'guru' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                          user.role === 'siswa' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                            'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                        }`}>
+                        {user.role}
+                      </span>
+                    </p>
                   </div>
                   <div>
                     <span className="text-sm text-gray-500 dark:text-gray-400">Member Since</span>
                     <p className="font-medium text-gray-900 dark:text-gray-100">
-                      {new Date(user.createdAt).toLocaleDateString()}
+                      {user.createdAt ? new Date(user.createdAt).toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' }) : '-'}
                     </p>
                   </div>
-                  {user.nis && (
+                  {/* NISN for Siswa */}
+                  {user.role === 'siswa' && (
+                    <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                      <span className="text-sm text-blue-600 dark:text-blue-300 font-medium">NISN</span>
+                      <p className="font-bold text-blue-800 dark:text-blue-100 text-lg tracking-wider">{user.nisn || user.nis || '-'}</p>
+                    </div>
+                  )}
+                  {/* NIP for Guru */}
+                  {user.role === 'guru' && user.nip && (
+                    <div className="bg-green-50 dark:bg-green-900/30 rounded-lg p-3 border border-green-200 dark:border-green-700">
+                      <span className="text-sm text-green-600 dark:text-green-300 font-medium">NIP</span>
+                      <p className="font-bold text-green-800 dark:text-green-100 text-lg tracking-wider">{user.nip}</p>
+                    </div>
+                  )}
+                  {/* Kelas for Siswa */}
+                  {user.role === 'siswa' && user.kelas_id && (
                     <div>
-                      <span className="text-sm text-gray-500 dark:text-gray-400">NIS</span>
-                      <p className="font-medium text-gray-900 dark:text-gray-100">{user.nis}</p>
+                      <span className="text-sm text-gray-500 dark:text-gray-400">Kelas</span>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{user.kelas_id?.nama_kelas || user.kelas_id}</p>
                     </div>
                   )}
                 </div>

@@ -16,7 +16,7 @@ export async function POST(request) {
     await connectDB();
 
     const body = await request.json();
-    const { kelas_id, judul_pertemuan, deskripsi_pertemuan, durasi_menit = 15 } = body;
+    const { kelas_id, mapel_id, judul_pertemuan, deskripsi_pertemuan, durasi_menit = 15 } = body;
 
     if (!kelas_id || !judul_pertemuan) {
       return NextResponse.json({ error: 'Field kelas_id dan judul_pertemuan wajib diisi.' }, { status: 400 });
@@ -25,7 +25,7 @@ export async function POST(request) {
     // Verifikasi apakah guru ini mengajar kelas tersebut
     const kelas = await Kelas.findById(kelas_id);
     if (!kelas || kelas.guru_id.toString() !== currentUser.id.toString()) { // currentUser.id dari token
-        return NextResponse.json({ error: 'Anda tidak berhak memulai sesi untuk kelas ini.' }, { status: 403 });
+      return NextResponse.json({ error: 'Anda tidak berhak memulai sesi untuk kelas ini.' }, { status: 403 });
     }
 
     const waktu_mulai = new Date();
@@ -33,6 +33,7 @@ export async function POST(request) {
 
     const newSession = await AttendanceSession.create({
       kelas_id,
+      mapel_id: mapel_id || null,
       guru_id: currentUser.id, // currentUser.id dari token
       judul_pertemuan,
       deskripsi_pertemuan,
@@ -84,6 +85,7 @@ export async function GET(request) {
 
     const sessions = await AttendanceSession.find(filter)
       .populate('kelas_id', 'nama_kelas')
+      .populate('mapel_id', 'nama_mapel')
       .populate('guru_id', 'nama')
       .sort({ waktu_mulai: -1 });
     return NextResponse.json(sessions);

@@ -14,24 +14,58 @@ export default function RekapNilaiPage() {
   const [error, setError] = useState("");
   const [toast, setToast] = useState({ message: "", type: "success" });
   const [exporting, setExporting] = useState(false);
+  const [user, setUser] = useState(null);
+  const [childrenList, setChildrenList] = useState([]);
 
-  // Fetch kelas list for filter
+  // Get current user
   useEffect(() => {
+    const stored = localStorage.getItem("user");
+    if (stored) {
+      setUser(JSON.parse(stored));
+    }
+  }, []);
+
+  // Fetch children for orangtua role
+  useEffect(() => {
+    if (!user) return;
+
+    if (user.role === 'orangtua') {
+      fetchWithAuth(`/api/orangtua?user_id=${user.id || user._id}`)
+        .then(res => res.json())
+        .then(data => {
+          const children = Array.isArray(data) ? data.map(o => o.siswa_id).filter(Boolean) : [];
+          setChildrenList(children);
+          // Set siswaList to children only for orangtua
+          setSiswaList(children);
+        })
+        .catch(() => setChildrenList([]));
+    }
+  }, [user]);
+
+  // Fetch kelas list for filter (not for orangtua)
+  useEffect(() => {
+    if (!user) return;
+    if (user.role === 'orangtua') {
+      // For orangtua, we don't need kelas filter
+      setKelasList([]);
+      return;
+    }
     fetchWithAuth("/api/kelas")
       .then(res => res.json())
       .then(data => setKelasList(Array.isArray(data) ? data : []));
-  }, []);
+  }, [user]);
 
-  // Fetch siswa list when kelasId changes
+  // Fetch siswa list when kelasId changes (not for orangtua)
   useEffect(() => {
+    if (!user || user.role === 'orangtua') return;
     if (!kelasId) {
       setSiswaList([]);
       return;
     }
     fetchWithAuth(`/api/enrollments?kelas_id=${kelasId}`)
       .then(res => res.json())
-      .then(data => setSiswaList(Array.isArray(data) ? data.map(e => e.siswa_id) : []));
-  }, [kelasId]);
+      .then(data => setSiswaList(Array.isArray(data) ? data.map(e => e.siswa_id).filter(Boolean) : []));
+  }, [kelasId, user]);
 
   // Fetch rekap nilai
   const fetchRekap = async () => {
@@ -39,8 +73,19 @@ export default function RekapNilaiPage() {
     setError("");
     let url = "/api/rekap/nilai";
     const params = [];
-    if (kelasId) params.push(`kelas_id=${kelasId}`);
-    if (siswaId) params.push(`siswa_id=${siswaId}`);
+
+    if (user?.role === 'orangtua') {
+      // For orangtua, always filter by their children
+      if (siswaId) {
+        params.push(`siswa_id=${siswaId}`);
+      } else if (childrenList.length > 0) {
+        params.push(`siswa_id=${childrenList.map(c => c._id).join(',')}`);
+      }
+    } else {
+      if (kelasId) params.push(`kelas_id=${kelasId}`);
+      if (siswaId) params.push(`siswa_id=${siswaId}`);
+    }
+
     if (params.length > 0) url += `?${params.join("&")}`;
     try {
       const res = await fetchWithAuth(url);
@@ -55,9 +100,9 @@ export default function RekapNilaiPage() {
   };
 
   useEffect(() => {
-    fetchRekap();
+    if (user) fetchRekap();
     // eslint-disable-next-line
-  }, [kelasId, siswaId]);
+  }, [kelasId, siswaId, user, childrenList]);
 
   const handleExportExcel = async () => {
     setExporting(true);
@@ -96,23 +141,33 @@ export default function RekapNilaiPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6 text-black">
+    <div className="max-w-5xl mx-auto p-6 text-gray-900 dark:text-gray-100">
       <Toast message={toast.message} type={toast.type} onClose={() => setToast({ message: "" })} />
       <h1 className="text-2xl font-bold mb-4">Rekap Nilai Siswa</h1>
-      <form className="flex gap-4 mb-6 items-end">
+      <form className="flex flex-wrap gap-4 mb-6 items-end">
+        {/* Hide kelas filter for orangtua */}
+        {user?.role !== 'orangtua' && (
+          <div>
+            <label className="block font-semibold mb-1">Kelas</label>
+            <select value={kelasId} onChange={e => setKelasId(e.target.value)} className="border rounded p-2 w-48 dark:bg-gray-700 dark:border-gray-600">
+              <option value="">Semua Kelas</option>
+              {kelasList.map(k => (
+                <option key={k._id} value={k._id}>{k.nama_kelas}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
-          <label className="block font-semibold mb-1">Kelas</label>
-          <select value={kelasId} onChange={e => setKelasId(e.target.value)} className="border rounded p-2 w-48">
-            <option value="">Semua Kelas</option>
-            {kelasList.map(k => (
-              <option key={k._id} value={k._id}>{k.nama_kelas}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block font-semibold mb-1">Siswa</label>
-          <select value={siswaId} onChange={e => setSiswaId(e.target.value)} className="border rounded p-2 w-48" disabled={!kelasId}>
-            <option value="">Semua Siswa</option>
+          <label className="block font-semibold mb-1">
+            {user?.role === 'orangtua' ? 'Pilih Anak' : 'Siswa'}
+          </label>
+          <select
+            value={siswaId}
+            onChange={e => setSiswaId(e.target.value)}
+            className="border rounded p-2 w-48 dark:bg-gray-700 dark:border-gray-600"
+            disabled={user?.role !== 'orangtua' && !kelasId}
+          >
+            <option value="">{user?.role === 'orangtua' ? 'Semua Anak' : 'Semua Siswa'}</option>
             {siswaList.map(s => (
               <option key={s._id} value={s._id}>{s.nama}</option>
             ))}
@@ -139,33 +194,33 @@ export default function RekapNilaiPage() {
         </button>
       </div>
       {loading ? (
-        <div>Loading...</div>
+        <div className="text-gray-500">Loading...</div>
       ) : error ? (
         <div className="text-red-500">{error}</div>
       ) : data.length === 0 ? (
         <div className="text-gray-500">Tidak ada data rekap nilai.</div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-white rounded shadow">
-            <thead>
+          <table className="min-w-full bg-white dark:bg-gray-800 rounded shadow">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
-                <th className="py-2 px-4 border-b">Nama Siswa</th>
-                <th className="py-2 px-4 border-b">Tugas</th>
-                <th className="py-2 px-4 border-b">Rata-rata</th>
-                <th className="py-2 px-4 border-b">Nilai Tertinggi</th>
-                <th className="py-2 px-4 border-b">Nilai Terendah</th>
-                <th className="py-2 px-4 border-b">Jumlah Submit</th>
+                <th className="py-2 px-4 border-b dark:border-gray-600">Nama Siswa</th>
+                <th className="py-2 px-4 border-b dark:border-gray-600">Tugas</th>
+                <th className="py-2 px-4 border-b dark:border-gray-600">Rata-rata</th>
+                <th className="py-2 px-4 border-b dark:border-gray-600">Nilai Tertinggi</th>
+                <th className="py-2 px-4 border-b dark:border-gray-600">Nilai Terendah</th>
+                <th className="py-2 px-4 border-b dark:border-gray-600">Jumlah Submit</th>
               </tr>
             </thead>
             <tbody>
               {data.map((row, idx) => (
-                <tr key={idx}>
-                  <td className="py-2 px-4 border-b">{row.siswa_nama}</td>
-                  <td className="py-2 px-4 border-b">{row.tugas_judul}</td>
-                  <td className="py-2 px-4 border-b text-center">{row.avg_nilai?.toFixed(2)}</td>
-                  <td className="py-2 px-4 border-b text-center">{row.max_nilai}</td>
-                  <td className="py-2 px-4 border-b text-center">{row.min_nilai}</td>
-                  <td className="py-2 px-4 border-b text-center">{row.count}</td>
+                <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="py-2 px-4 border-b dark:border-gray-600">{row.siswa_nama}</td>
+                  <td className="py-2 px-4 border-b dark:border-gray-600">{row.tugas_judul}</td>
+                  <td className="py-2 px-4 border-b dark:border-gray-600 text-center">{row.avg_nilai?.toFixed(2)}</td>
+                  <td className="py-2 px-4 border-b dark:border-gray-600 text-center">{row.max_nilai}</td>
+                  <td className="py-2 px-4 border-b dark:border-gray-600 text-center">{row.min_nilai}</td>
+                  <td className="py-2 px-4 border-b dark:border-gray-600 text-center">{row.count}</td>
                 </tr>
               ))}
             </tbody>
@@ -174,4 +229,4 @@ export default function RekapNilaiPage() {
       )}
     </div>
   );
-} 
+}

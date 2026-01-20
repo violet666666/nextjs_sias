@@ -183,6 +183,7 @@ export default function GuruAttendanceView({ user, setToast }) {
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Kelas</th>
+              <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Mata Pelajaran</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Judul Pertemuan</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Waktu Mulai</th>
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wider">Waktu Selesai</th>
@@ -192,19 +193,22 @@ export default function GuruAttendanceView({ user, setToast }) {
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredGuruSessions.length === 0 && (
               <tr>
-                <td colSpan="5" className="text-center py-4 text-gray-500 dark:text-gray-400">
+                <td colSpan="6" className="text-center py-4 text-gray-500 dark:text-gray-400">
                   Tidak ada sesi ditemukan.
                 </td>
               </tr>
             )}
             {filteredGuruSessions.map((session) => (
-              <tr 
-                key={session._id} 
+              <tr
+                key={session._id}
                 className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-200"
                 onClick={() => router.push(`/cpanel/attendance-sessions/${session._id}`)}
               >
                 <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">
                   {session.kelas_id?.nama_kelas || "N/A"}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">
+                  {session.mapel_id?.nama_mapel || session.mapel_id?.nama || "-"}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">{session.judul_pertemuan}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">{new Date(session.waktu_mulai).toLocaleString('id-ID')}</td>
@@ -253,7 +257,7 @@ export default function GuruAttendanceView({ user, setToast }) {
                 >
                   <option value="">Pilih Mata Pelajaran</option>
                   {mapelList.map(m => (
-                    <option key={m._id} value={m._id}>{m.nama}</option>
+                    <option key={m._id} value={m._id}>{m.nama_mapel || m.nama}</option>
                   ))}
                 </select>
               </div>

@@ -35,6 +35,7 @@ export default function TaskManagementPage() {
   const [showGradeModal, setShowGradeModal] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
   const [toast, setToast] = useState({ message: "", type: "success" });
+  const [siswaCount, setSiswaCount] = useState(0);
 
   // Real-time hooks
   const {
@@ -96,6 +97,9 @@ export default function TaskManagementPage() {
         if (data.length > 0) {
           setSelectedClass(data[0]._id);
         }
+        // Calculate total siswa from all classes
+        const totalSiswa = data.reduce((sum, kelas) => sum + (kelas.siswa_ids?.length || 0), 0);
+        setSiswaCount(totalSiswa);
       }
     } catch (error) {
       setToast({ message: "Gagal memuat kelas", type: "error" });
@@ -111,7 +115,15 @@ export default function TaskManagementPage() {
     try {
       const res = await fetchWithAuth(`/api/subjects?kelas_id=${classId}`);
       if (res.ok) {
-        const data = await res.json();
+        let data = await res.json();
+        // Client-side filter for gurus to only show subjects they teach
+        if (user && user.role === 'guru') {
+          data = data.filter(s => {
+            const ids = (s.guru_ids || []).map(g => typeof g === 'object' ? g._id : g);
+            if (s.guru_id) ids.push(typeof s.guru_id === 'object' ? s.guru_id._id : s.guru_id);
+            return ids.includes(user.id || user._id);
+          });
+        }
         setSubjects(data);
         // Auto-select first subject if available
         if (data.length > 0) {
@@ -148,7 +160,7 @@ export default function TaskManagementPage() {
       setToast({ message: "Tugas berhasil dibuat", type: "success" });
       logActivity('create_task', { classId: selectedClass, taskTitle: taskForm.judul });
     } else {
-      setToast({ message: "Gagal membuat tugas. Pastikan semua field terisi.", type: "error" });
+      setToast({ message: error || "Gagal membuat tugas. Pastikan koneksi stabil dan coba lagi.", type: "error" });
     }
   };
 
@@ -215,10 +227,10 @@ export default function TaskManagementPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center">
               <Users className="w-5 h-5 text-blue-600 mr-2" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">Online Users</span>
+              <span className="text-sm text-gray-600 dark:text-gray-400">Total Siswa</span>
             </div>
             <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {onlineUsers.length}
+              {siswaCount}
             </p>
           </div>
 

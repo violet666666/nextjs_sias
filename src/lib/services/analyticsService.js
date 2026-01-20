@@ -31,7 +31,7 @@ class AnalyticsService {
 
       return {
         ...baseStats,
-        activeClasses: await Kelas.countDocuments({ status_kelas: 'Aktif' }),
+        activeClasses: await Kelas.countDocuments({ status_kelas: 'aktif' }),
         completionRate: await this.getCompletionRate(),
         averageGrade: gradeStats.average ? Math.round(gradeStats.average) : 0,
         usersByRole: await this.getUsersByRole(),
@@ -332,7 +332,7 @@ class AnalyticsService {
       const className = mapel.kelas_id.nama_kelas;
       // Fetch grades ONLY for this subject
       const grades = await Submission.find({
-        tugas_id: { $in: await Tugas.find({ mata_pelajaran_id: mapel._id }).distinct('_id') },
+        tugas_id: { $in: await Tugas.find({ mapel_id: mapel._id }).distinct('_id') },
         nilai: { $exists: true }
       });
 
@@ -410,7 +410,7 @@ class AnalyticsService {
 
     // 1. Low Grades
     const lowGrades = await Submission.find({
-      tugas_id: { $in: await Tugas.find({ mata_pelajaran_id: { $in: subjectIds } }).distinct('_id') },
+      tugas_id: { $in: await Tugas.find({ mapel_id: { $in: subjectIds } }).distinct('_id') },
       nilai: { $lt: 75 } // KKM Assumption
     }).populate('siswa_id', 'nama email').limit(10);
 
@@ -675,7 +675,7 @@ class AnalyticsService {
   }
 
   static async getSubjectPerformance() {
-    // Note: Assuming 'tugas' and 'mata_pelajarans' collection names
+    // Note: Fixed field/collection names to match actual schema
     return await Submission.aggregate([
       {
         $lookup: {
@@ -685,22 +685,23 @@ class AnalyticsService {
           as: "tugas"
         }
       },
-      { $unwind: "$tugas" },
+      { $unwind: { path: "$tugas", preserveNullAndEmptyArrays: false } },
       {
         $lookup: {
-          from: "mata_pelajarans",
-          localField: "tugas.mata_pelajaran_id",
+          from: "matapelajarans", // Correct collection name
+          localField: "tugas.mapel_id", // Correct field name
           foreignField: "_id",
           as: "mapel"
         }
       },
-      { $unwind: "$mapel" },
+      { $unwind: { path: "$mapel", preserveNullAndEmptyArrays: false } },
       {
         $group: {
-          _id: "$mapel.nama_pelajaran",
+          _id: "$mapel.nama_mapel", // Correct field name
           score: { $avg: "$nilai" }
         }
       },
+      { $match: { _id: { $ne: null } } },
       { $project: { subject: "$_id", score: { $round: ["$score", 0] }, _id: 0, fullMark: 100 } },
       { $limit: 6 }
     ]);

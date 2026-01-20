@@ -15,7 +15,8 @@ export async function GET(request, { params }) {
         }
 
         await connectDB();
-        const { id } = params; // 'id' ini adalah ID siswa yang nilainya ingin dilihat
+        // Next.js 16: params is a Promise, must await before destructuring
+        const { id } = await params;
         const currentUser = decoded;
 
         // Perbaikan 2: Menambahkan logika otorisasi untuk role 'orangtua'

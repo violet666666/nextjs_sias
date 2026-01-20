@@ -14,12 +14,34 @@ export async function GET(request, { params }) {
     }
     const currentUser = authResult.user;
 
-    if (currentUser.role !== 'admin' && currentUser.id !== id) {
-      return NextResponse.json({ error: 'Akses ditolak: Anda hanya bisa melihat profil sendiri.' }, { status: 403 });
+    await connectDB();
+
+    // Check if user can access this profile
+    let canAccess = false;
+
+    // Admin and Guru can access all profiles
+    if (currentUser.role === 'admin' || currentUser.role === 'guru') {
+      canAccess = true;
+    }
+    // User can access their own profile
+    else if (currentUser.id === id) {
+      canAccess = true;
+    }
+    // Orangtua can access their linked children's profiles
+    else if (currentUser.role === 'orangtua') {
+      const Orangtua = (await import('@/lib/models/Orangtua')).default;
+      const relation = await Orangtua.findOne({
+        user_id: currentUser.id,
+        siswa_id: id
+      });
+      if (relation) canAccess = true;
     }
 
-    await connectDB();
-    const user = await User.findById(id).select('-password_hash');
+    if (!canAccess) {
+      return NextResponse.json({ error: 'Akses ditolak: Anda tidak berhak melihat profil ini.' }, { status: 403 });
+    }
+
+    const user = await User.findById(id).select('-password_hash').populate('kelas_id', 'nama_kelas tahun_ajaran');
     if (!user) return NextResponse.json({ error: 'User tidak ditemukan' }, { status: 404 });
     return NextResponse.json(user);
   } catch (error) {
@@ -43,7 +65,7 @@ export async function PUT(request, { params }) {
 
     await connectDB();
     let body = await request.json();
-    
+
     // User tidak bisa mengubah role sendiri, kecuali admin
     if (currentUser.role !== 'admin' && body.role && body.role !== currentUser.role) {
       delete body.role; // Hapus percobaan perubahan role
@@ -78,10 +100,10 @@ export async function DELETE(request, { params }) {
     await connectDB();
     const user = await User.findByIdAndDelete(id);
     if (!user) return NextResponse.json({ error: 'User tidak ditemukan' }, { status: 404 });
-    
+
     // Audit log
     await logCRUDAction(currentUser.id, 'DELETE_USER', 'USER', id, { nama: user.nama, email: user.email, role: user.role });
-    
+
     return NextResponse.json({ message: 'User berhasil dihapus' });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

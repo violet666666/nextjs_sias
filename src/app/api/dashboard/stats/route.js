@@ -25,12 +25,13 @@ export async function GET(request) {
     const Tugas = (await import('@/lib/models/Tugas')).default;
     const Submission = (await import('@/lib/models/Submission')).default;
     const Orangtua = (await import('@/lib/models/Orangtua')).default;
+    const MataPelajaran = (await import('@/lib/models/MataPelajaran')).default;
 
     if (role === 'admin') {
       stats.totalStudents = await User.countDocuments({ role: 'siswa' });
       stats.totalTeachers = await User.countDocuments({ role: 'guru' });
       stats.totalClasses = await Kelas.countDocuments();
-      stats.totalSubjects = 0; // Tambahkan jika ada koleksi mapel
+      stats.totalSubjects = await MataPelajaran.countDocuments();
       stats.activeSessions = 0; // Tambahkan jika ada sesi aktif
       stats.pendingTasks = await Tugas.countDocuments({ status: 'active' });
       stats.completedTasks = await Tugas.countDocuments({ status: 'completed' });

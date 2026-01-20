@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchWithAuth } from '@/lib/fetchWithAuth';
 
@@ -14,7 +14,8 @@ const TABS = [
 ];
 
 export default function ParentChildDetailPage({ params }) {
-  const { anakId } = params;
+  // Next.js 16: params is a Promise, use React.use() to unwrap
+  const { anakId } = use(params);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [anak, setAnak] = useState(null);
@@ -371,7 +372,7 @@ export default function ParentChildDetailPage({ params }) {
               {komentar.map((k) => (
                 <div key={k._id} className="flex items-start gap-3 bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
                   <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold text-lg">
-                    {k.user?.nama ? k.user.nama.split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2) : '?'}
+                    {k.user?.nama ? k.user.nama.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : '?'}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">

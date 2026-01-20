@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
 import Submission from '@/lib/models/Submission';
 import Tugas from '@/lib/models/Tugas';
+import User from '@/lib/models/userModel';
 import Kelas from '@/lib/models/Kelas';
+import MataPelajaran from '@/lib/models/MataPelajaran';
 import { authenticateAndAuthorize } from '@/lib/authMiddleware';
 import ExcelJS from 'exceljs';
 import { logCRUDAction } from '@/lib/auditLogger';
@@ -66,24 +68,38 @@ export async function GET(request) {
       },
       { $unwind: "$siswa" },
       { $unwind: "$tugas" },
+      // Lookup Mapel for Excel too
+      {
+        $lookup: {
+          from: "matapelajarans",
+          let: { mapelId: "$tugas.mapel_id" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$mapelId"] } } }
+          ],
+          as: "mapel"
+        }
+      },
       {
         $project: {
           siswa_nama: "$siswa.nama",
           tugas_judul: "$tugas.judul",
+          mapel_nama: { $ifNull: [{ $arrayElemAt: ["$mapel.nama_mapel", 0] }, "-"] },
           avg_nilai: 1,
           min_nilai: 1,
           max_nilai: 1,
           count: 1
         }
       },
-      { $sort: { siswa_nama: 1, tugas_judul: 1 } }
+      { $sort: { siswa_nama: 1, mapel_nama: 1, tugas_judul: 1 } }
     ];
     const result = await Submission.aggregate(pipeline);
 
+    // Generate Excel
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Rekap Nilai');
     worksheet.columns = [
       { header: 'Nama Siswa', key: 'siswa_nama', width: 30 },
+      { header: 'Mata Pelajaran', key: 'mapel_nama', width: 25 },
       { header: 'Tugas', key: 'tugas_judul', width: 30 },
       { header: 'Rata-rata', key: 'avg_nilai', width: 15 },
       { header: 'Nilai Tertinggi', key: 'max_nilai', width: 15 },
@@ -93,6 +109,7 @@ export async function GET(request) {
     result.forEach(row => {
       worksheet.addRow({
         siswa_nama: row.siswa_nama,
+        mapel_nama: row.mapel_nama,
         tugas_judul: row.tugas_judul,
         avg_nilai: row.avg_nilai?.toFixed(2),
         max_nilai: row.max_nilai,
@@ -102,6 +119,7 @@ export async function GET(request) {
     });
     const buffer = await workbook.xlsx.writeBuffer();
 
+    // Audit log
     await logCRUDAction(user.id, 'EXPORT_EXCEL', 'REKAP_NILAI', null, { kelas_id, siswa_id });
 
     return new Response(buffer, {
@@ -115,4 +133,3 @@ export async function GET(request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

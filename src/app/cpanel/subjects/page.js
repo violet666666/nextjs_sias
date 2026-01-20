@@ -9,9 +9,9 @@ import { fetchWithAuth } from '@/lib/fetchWithAuth';
 import Select from 'react-select';
 
 const initialForm = {
-  nama: '',
-  kode: '',
-  deskripsi: '',
+  nama_mapel: '',
+  kode_mapel: '',
+  kkm: 75,
   kelas_id: '',
   guru_ids: [],
 };
@@ -90,9 +90,9 @@ export default function SubjectsPage() {
   const openModal = (subject = null) => {
     if (subject) {
       setForm({
-        nama: subject.nama || '',
-        kode: subject.kode || '',
-        deskripsi: subject.deskripsi || '',
+        nama_mapel: subject.nama_mapel || subject.nama || '',
+        kode_mapel: subject.kode_mapel || subject.kode || '',
+        kkm: subject.kkm || 75,
         kelas_id: subject.kelas_id?._id || subject.kelas_id || '',
         guru_ids: Array.isArray(subject.guru_ids)
           ? subject.guru_ids.map(g => g._id || g)
@@ -162,11 +162,23 @@ export default function SubjectsPage() {
     }
   };
 
-  // Table columns
+  // Table columns - Fixed to match MataPelajaran model field names
   const columns = [
-    { key: 'nama', label: 'Nama' },
-    { key: 'kode', label: 'Kode' },
-    { key: 'deskripsi', label: 'Deskripsi' },
+    {
+      key: 'nama_mapel',
+      label: 'Nama',
+      render: (val, subject) => subject.nama_mapel || subject.nama || '-'
+    },
+    {
+      key: 'kode_mapel',
+      label: 'Kode',
+      render: (val, subject) => subject.kode_mapel || subject.kode || '-'
+    },
+    {
+      key: 'kkm',
+      label: 'KKM',
+      render: (val) => val || '75'
+    },
     {
       key: 'kelas',
       label: 'Kelas',
@@ -199,7 +211,7 @@ export default function SubjectsPage() {
   ];
 
   return (
-    <ProtectedRoute requiredRoles={['admin','guru']}>
+    <ProtectedRoute requiredRoles={['admin', 'guru']}>
       <div className="max-w-5xl mx-auto py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-3xl font-bold">Manajemen Mata Pelajaran</h1>

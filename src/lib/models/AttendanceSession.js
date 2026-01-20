@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const AttendanceSessionSchema = new mongoose.Schema({
   kelas_id: { type: mongoose.Schema.Types.ObjectId, ref: "Kelas", required: true },
+  mapel_id: { type: mongoose.Schema.Types.ObjectId, ref: "MataPelajaran" }, // Mata pelajaran untuk sesi ini
   guru_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true }, // Guru yang membuka sesi
   judul_pertemuan: { type: String, required: true },
   deskripsi_pertemuan: { type: String },

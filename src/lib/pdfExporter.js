@@ -1,9 +1,10 @@
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 
 /**
  * PDF Export Utility for Student Academic Information System
+ * Uses jspdf-autotable with correct ESM import syntax: autoTable(doc, options)
  */
 
 // Helper function to format date
@@ -32,16 +33,16 @@ const formatTime = (date) => {
  */
 export const exportAttendancePDF = async (attendanceData, className, sessionDate) => {
   const doc = new jsPDF();
-  
+
   // Header
   doc.setFontSize(20);
   doc.text('LAPORAN KEHADIRAN SISWA', 105, 20, { align: 'center' });
-  
+
   doc.setFontSize(12);
   doc.text(`Kelas: ${className}`, 20, 35);
   doc.text(`Tanggal: ${formatDate(sessionDate)}`, 20, 45);
   doc.text(`Total Siswa: ${attendanceData.length}`, 20, 55);
-  
+
   // Table data
   const tableData = attendanceData.map((attendance, index) => [
     index + 1,
@@ -50,9 +51,9 @@ export const exportAttendancePDF = async (attendanceData, className, sessionDate
     formatTime(attendance.timestamp),
     attendance.keterangan || '-'
   ]);
-  
-  // Create table
-  doc.autoTable({
+
+  // Create table using correct autoTable syntax
+  autoTable(doc, {
     startY: 70,
     head: [['No', 'Nama Siswa', 'Status', 'Waktu', 'Keterangan']],
     body: tableData,
@@ -73,7 +74,7 @@ export const exportAttendancePDF = async (attendanceData, className, sessionDate
       4: { cellWidth: 40 }
     }
   });
-  
+
   // Footer
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
@@ -81,7 +82,7 @@ export const exportAttendancePDF = async (attendanceData, className, sessionDate
     doc.setFontSize(10);
     doc.text(`Halaman ${i} dari ${pageCount}`, 105, doc.internal.pageSize.height - 10, { align: 'center' });
   }
-  
+
   return doc;
 };
 
@@ -90,23 +91,23 @@ export const exportAttendancePDF = async (attendanceData, className, sessionDate
  */
 export const exportGradesPDF = async (gradesData, className, taskTitle) => {
   const doc = new jsPDF();
-  
+
   // Header
   doc.setFontSize(20);
   doc.text('LAPORAN NILAI TUGAS', 105, 20, { align: 'center' });
-  
+
   doc.setFontSize(12);
   doc.text(`Kelas: ${className}`, 20, 35);
   doc.text(`Tugas: ${taskTitle}`, 20, 45);
   doc.text(`Total Siswa: ${gradesData.length}`, 20, 55);
-  
+
   // Calculate statistics
   const submittedCount = gradesData.filter(g => g.nilai !== null && g.nilai !== undefined).length;
-  const averageScore = gradesData.reduce((sum, g) => sum + (g.nilai || 0), 0) / submittedCount || 0;
-  
+  const averageScore = submittedCount > 0 ? gradesData.reduce((sum, g) => sum + (g.nilai || 0), 0) / submittedCount : 0;
+
   doc.text(`Tugas Dikumpulkan: ${submittedCount}`, 20, 65);
   doc.text(`Rata-rata Nilai: ${averageScore.toFixed(2)}`, 20, 75);
-  
+
   // Table data
   const tableData = gradesData.map((grade, index) => [
     index + 1,
@@ -115,9 +116,9 @@ export const exportGradesPDF = async (gradesData, className, taskTitle) => {
     grade.feedback || '-',
     formatDate(grade.submitted_at)
   ]);
-  
-  // Create table
-  doc.autoTable({
+
+  // Create table using correct autoTable syntax
+  autoTable(doc, {
     startY: 90,
     head: [['No', 'Nama Siswa', 'Nilai', 'Feedback', 'Tanggal Submit']],
     body: tableData,
@@ -138,7 +139,7 @@ export const exportGradesPDF = async (gradesData, className, taskTitle) => {
       4: { cellWidth: 35 }
     }
   });
-  
+
   // Footer
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
@@ -146,7 +147,7 @@ export const exportGradesPDF = async (gradesData, className, taskTitle) => {
     doc.setFontSize(10);
     doc.text(`Halaman ${i} dari ${pageCount}`, 105, doc.internal.pageSize.height - 10, { align: 'center' });
   }
-  
+
   return doc;
 };
 
@@ -155,16 +156,16 @@ export const exportGradesPDF = async (gradesData, className, taskTitle) => {
  */
 export const exportStudentListPDF = async (students, className) => {
   const doc = new jsPDF();
-  
+
   // Header
   doc.setFontSize(20);
   doc.text('DAFTAR SISWA', 105, 20, { align: 'center' });
-  
+
   doc.setFontSize(12);
   doc.text(`Kelas: ${className}`, 20, 35);
   doc.text(`Total Siswa: ${students.length}`, 20, 45);
   doc.text(`Tanggal Export: ${formatDate(new Date())}`, 20, 55);
-  
+
   // Table data
   const tableData = students.map((student, index) => [
     index + 1,
@@ -174,9 +175,9 @@ export const exportStudentListPDF = async (students, className) => {
     student.nomor_telepon || '-',
     formatDate(student.tanggal_lahir)
   ]);
-  
-  // Create table
-  doc.autoTable({
+
+  // Create table using correct autoTable syntax
+  autoTable(doc, {
     startY: 70,
     head: [['No', 'NISN', 'Nama', 'Email', 'Telepon', 'Tanggal Lahir']],
     body: tableData,
@@ -198,7 +199,7 @@ export const exportStudentListPDF = async (students, className) => {
       5: { cellWidth: 25 }
     }
   });
-  
+
   // Footer
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
@@ -206,7 +207,7 @@ export const exportStudentListPDF = async (students, className) => {
     doc.setFontSize(10);
     doc.text(`Halaman ${i} dari ${pageCount}`, 105, doc.internal.pageSize.height - 10, { align: 'center' });
   }
-  
+
   return doc;
 };
 
@@ -215,15 +216,15 @@ export const exportStudentListPDF = async (students, className) => {
  */
 export const exportClassSchedulePDF = async (classes) => {
   const doc = new jsPDF();
-  
+
   // Header
   doc.setFontSize(20);
   doc.text('JADWAL KELAS', 105, 20, { align: 'center' });
-  
+
   doc.setFontSize(12);
   doc.text(`Total Kelas: ${classes.length}`, 20, 35);
   doc.text(`Tanggal Export: ${formatDate(new Date())}`, 20, 45);
-  
+
   // Table data
   const tableData = classes.map((kelas, index) => [
     index + 1,
@@ -233,9 +234,9 @@ export const exportClassSchedulePDF = async (classes) => {
     kelas.status_kelas,
     formatDate(kelas.createdAt)
   ]);
-  
-  // Create table
-  doc.autoTable({
+
+  // Create table using correct autoTable syntax
+  autoTable(doc, {
     startY: 60,
     head: [['No', 'Nama Kelas', 'Guru', 'Tahun Ajaran', 'Status', 'Tanggal Dibuat']],
     body: tableData,
@@ -257,7 +258,7 @@ export const exportClassSchedulePDF = async (classes) => {
       5: { cellWidth: 30 }
     }
   });
-  
+
   // Footer
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
@@ -265,7 +266,7 @@ export const exportClassSchedulePDF = async (classes) => {
     doc.setFontSize(10);
     doc.text(`Halaman ${i} dari ${pageCount}`, 105, doc.internal.pageSize.height - 10, { align: 'center' });
   }
-  
+
   return doc;
 };
 
@@ -274,20 +275,20 @@ export const exportClassSchedulePDF = async (classes) => {
  */
 export const exportDashboardSummaryPDF = async (summaryData) => {
   const doc = new jsPDF();
-  
+
   // Header
   doc.setFontSize(20);
   doc.text('RINGKASAN DASHBOARD', 105, 20, { align: 'center' });
-  
+
   doc.setFontSize(12);
   doc.text(`Tanggal Export: ${formatDate(new Date())}`, 20, 35);
-  
+
   // Summary statistics
   let yPosition = 50;
   doc.setFontSize(14);
   doc.text('Statistik Sistem:', 20, yPosition);
   yPosition += 15;
-  
+
   doc.setFontSize(12);
   doc.text(`Total Siswa: ${summaryData.totalSiswa || 0}`, 30, yPosition);
   yPosition += 10;
@@ -298,13 +299,13 @@ export const exportDashboardSummaryPDF = async (summaryData) => {
   doc.text(`Total Tugas: ${summaryData.totalTugas || 0}`, 30, yPosition);
   yPosition += 10;
   doc.text(`Total Orangtua: ${summaryData.totalOrangtua || 0}`, 30, yPosition);
-  
+
   // Recent activities
   yPosition += 20;
   doc.setFontSize(14);
   doc.text('Aktivitas Terbaru:', 20, yPosition);
   yPosition += 15;
-  
+
   if (summaryData.recentActivities && summaryData.recentActivities.length > 0) {
     const activityData = summaryData.recentActivities.slice(0, 10).map((activity, index) => [
       index + 1,
@@ -312,8 +313,8 @@ export const exportDashboardSummaryPDF = async (summaryData) => {
       activity.user?.nama || 'N/A',
       formatDate(activity.timestamp)
     ]);
-    
-    doc.autoTable({
+
+    autoTable(doc, {
       startY: yPosition,
       head: [['No', 'Aktivitas', 'User', 'Tanggal']],
       body: activityData,
@@ -331,7 +332,7 @@ export const exportDashboardSummaryPDF = async (summaryData) => {
     doc.setFontSize(12);
     doc.text('Tidak ada aktivitas terbaru', 30, yPosition);
   }
-  
+
   // Footer
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
@@ -339,7 +340,7 @@ export const exportDashboardSummaryPDF = async (summaryData) => {
     doc.setFontSize(10);
     doc.text(`Halaman ${i} dari ${pageCount}`, 105, doc.internal.pageSize.height - 10, { align: 'center' });
   }
-  
+
   return doc;
 };
 
@@ -363,4 +364,4 @@ export const downloadPDF = (doc, filename) => {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
-}; 
+};

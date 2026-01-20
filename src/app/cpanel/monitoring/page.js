@@ -29,15 +29,11 @@ export default function MonitoringPage() {
       router.push("/cpanel/dashboard");
       return;
     }
-    if (u.role === "orangtua") {
-      const anak = localStorage.getItem("anak_id");
-      if (!anak) {
-        setToast({ message: "Silakan pilih anak terlebih dahulu di dashboard.", type: "error" });
-        setTimeout(() => router.push("/cpanel/dashboard"), 1500);
-        return;
-      }
+    // For orangtua: Don't redirect, let them select a child on this page
+    // For siswa: fetch their own data immediately
+    if (u.role === "siswa") {
+      fetchData(u);
     }
-    fetchData(u);
   }, [router]);
 
   useEffect(() => {
@@ -176,7 +172,7 @@ function MonitoringChildRow({ siswa }) {
           className="inline-flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-blue-400"
           title="Lihat Monitoring Anak"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
           Lihat Detail
         </Link>
       </td>
