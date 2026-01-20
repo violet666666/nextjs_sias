@@ -7,7 +7,9 @@
 
 # Testing
 /coverage
-/pptx-generator
+# Presentation Assets
+*.pptx
+public/assets/sidang_files/pptx-generator/
 # Next.js build folder
 /.next/
 
