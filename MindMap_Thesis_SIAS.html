@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mind Map - Thesis SIAS | SMK Negeri 2 Makassar</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #0ea5e9;
+            --accent: #8b5cf6;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --gray: #64748b;
+
+            /* Node Colors */
+            --node-center: linear-gradient(135deg, #2563eb 0%, #8b5cf6 100%);
+            --node-bab1: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+            --node-bab2: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
+            --node-bab3: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+            --node-bab4: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+            --node-bab5: linear-gradient(135deg, #ef4444 0%, #ec4899 100%);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--dark) 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+            color: white;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 40px 20px 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, white 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: var(--gray);
+            font-size: 1rem;
+        }
+
+        /* Mind Map Container */
+        .mindmap-container {
+            position: relative;
+            width: 100%;
+            min-height: calc(100vh - 150px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        /* SVG Lines Container */
+        .svg-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .connection-line {
+            stroke: rgba(255, 255, 255, 0.2);
+            stroke-width: 2;
+            fill: none;
+            stroke-dasharray: 5, 5;
+            animation: dash 20s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -100;
+            }
+        }
+
+        /* Mind Map Wrapper */
+        .mindmap-wrapper {
+            position: relative;
+            width: 1400px;
+            height: 900px;
+            z-index: 2;
+        }
+
+        /* Nodes */
+        .node {
+            position: absolute;
+            border-radius: 16px;
+            padding: 20px 25px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            z-index: 10;
+        }
+
+        .node:hover {
+            transform: scale(1.08);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+            z-index: 100;
+        }
+
+        .node h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .node p {
+            font-size: 0.75rem;
+            opacity: 0.9;
+        }
+
+        /* Center Node - Title */
+        .node-center {
+            background: var(--node-center);
+            width: 280px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            padding: 30px 35px;
+            animation: pulse-glow 3s ease-in-out infinite;
+        }
+
+        .node-center h3 {
+            font-size: 1.3rem;
+        }
+
+        .node-center p {
+            font-size: 0.85rem;
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 10px 40px rgba(37, 99, 235, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 15px 60px rgba(139, 92, 246, 0.6);
+            }
+        }
+
+        /* BAB Nodes */
+        .node-bab1 {
+            background: var(--node-bab1);
+        }
+
+        .node-bab2 {
+            background: var(--node-bab2);
+        }
+
+        .node-bab3 {
+            background: var(--node-bab3);
+        }
+
+        .node-bab4 {
+            background: var(--node-bab4);
+        }
+
+        .node-bab5 {
+            background: var(--node-bab5);
+        }
+
+        /* Sub Nodes */
+        .node-sub {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 12px 16px;
+            min-width: 140px;
+        }
+
+        .node-sub h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .node-sub:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: absolute;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            padding: 15px 20px;
+            max-width: 300px;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .tooltip.active {
+            opacity: 1;
+        }
+
+        .tooltip h4 {
+            font-size: 1rem;
+            margin-bottom: 10px;
+            color: var(--secondary);
+        }
+
+        .tooltip ul {
+            list-style: none;
+            font-size: 0.85rem;
+        }
+
+        .tooltip li {
+            padding-left: 15px;
+            position: relative;
+            margin-bottom: 5px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .tooltip li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+        }
+
+        /* Floating particles */
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: rgba(37, 99, 235, 0.3);
+            border-radius: 50%;
+            animation: float 15s infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0) translateX(0);
+                opacity: 0;
+            }
+
+            10% {
+                opacity: 1;
+            }
+
+            90% {
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(-100vh) translateX(100px);
+                opacity: 0;
+            }
+        }
+
+        /* Legend */
+        .legend {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px 20px;
+            z-index: 100;
+        }
+
+        .legend h4 {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+            color: var(--gray);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 5px;
+            font-size: 0.8rem;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+        }
+
+        /* Controls */
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .control-btn {
+            width: 45px;
+            height: 45px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .control-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+            transform: scale(1.1);
+        }
+
+        /* Info panel */
+        .info-panel {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px 20px;
+            max-width: 280px;
+            z-index: 100;
+        }
+
+        .info-panel h4 {
+            font-size: 0.9rem;
+            color: var(--secondary);
+            margin-bottom: 8px;
+        }
+
+        .info-panel p {
+            font-size: 0.8rem;
+            color: var(--gray);
+            line-height: 1.5;
+        }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .mindmap-wrapper {
+                transform: scale(0.8);
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .mindmap-wrapper {
+                transform: scale(0.6);
+            }
+        }
+
+        @media (max-width: 800px) {
+            .mindmap-wrapper {
+                transform: scale(0.45);
+            }
+
+            .legend,
+            .info-panel {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Floating Particles -->
+    <div class="particles" id="particles"></div>
+
+    <!-- Header -->
+    <div class="header">
+        <h1>🗺️ Mind Map Thesis SIAS</h1>
+        <p>Sistem Informasi Akademik Siswa Berbasis Web - SMK Negeri 2 Makassar</p>
+    </div>
+
+    <!-- Mind Map Container -->
+    <div class="mindmap-container">
+        <div class="mindmap-wrapper" id="mindmap">
+            <!-- SVG for connections -->
+            <svg class="svg-container" id="connections"></svg>
+
+            <!-- CENTER NODE - Thesis Title -->
+            <div class="node node-center" id="center" data-tooltip="thesis">
+                <h3>SIAS</h3>
+                <p>Sistem Informasi Akademik Siswa<br>MERN Stack</p>
+            </div>
+
+            <!-- BAB I - PENDAHULUAN (Top-Left) -->
+            <div class="node node-bab1" id="bab1" style="left: 120px; top: 180px;" data-tooltip="bab1">
+                <h3>📖 BAB I</h3>
+                <p>Pendahuluan</p>
+            </div>
+            <div class="node node-sub" id="bab1-1" style="left: 10px; top: 80px;">
+                <h3>Latar Belakang</h3>
+            </div>
+            <div class="node node-sub" id="bab1-2" style="left: 10px; top: 140px;">
+                <h3>Rumusan Masalah</h3>
+            </div>
+            <div class="node node-sub" id="bab1-3" style="left: 10px; top: 200px;">
+                <h3>Tujuan Penelitian</h3>
+            </div>
+            <div class="node node-sub" id="bab1-4" style="left: 10px; top: 260px;">
+                <h3>Batasan Masalah</h3>
+            </div>
+
+            <!-- BAB II - TINJAUAN PUSTAKA (Top-Right) -->
+            <div class="node node-bab2" id="bab2" style="right: 120px; top: 180px;" data-tooltip="bab2">
+                <h3>📚 BAB II</h3>
+                <p>Tinjauan Pustaka</p>
+            </div>
+            <div class="node node-sub" id="bab2-1" style="right: 10px; top: 80px;">
+                <h3>Landasan Teori</h3>
+            </div>
+            <div class="node node-sub" id="bab2-2" style="right: 10px; top: 140px;">
+                <h3>State of The Art</h3>
+            </div>
+            <div class="node node-sub" id="bab2-3" style="right: 10px; top: 200px;">
+                <h3>MERN Stack</h3>
+            </div>
+            <div class="node node-sub" id="bab2-4" style="right: 10px; top: 260px;">
+                <h3>MongoDB NoSQL</h3>
+            </div>
+
+            <!-- BAB III - METODOLOGI (Left) -->
+            <div class="node node-bab3" id="bab3" style="left: 50px; top: 420px;" data-tooltip="bab3">
+                <h3>⚙️ BAB III</h3>
+                <p>Metodologi</p>
+            </div>
+            <div class="node node-sub" id="bab3-1" style="left: 10px; top: 340px;">
+                <h3>Waterfall Model</h3>
+            </div>
+            <div class="node node-sub" id="bab3-2" style="left: 10px; top: 400px;">
+                <h3>Use Case Diagram</h3>
+            </div>
+            <div class="node node-sub" id="bab3-3" style="left: 10px; top: 460px;">
+                <h3>ERD Design</h3>
+            </div>
+            <div class="node node-sub" id="bab3-4" style="left: 10px; top: 520px;">
+                <h3>UI/UX Mockup</h3>
+            </div>
+
+            <!-- BAB IV - HASIL (Right) -->
+            <div class="node node-bab4" id="bab4" style="right: 50px; top: 420px;" data-tooltip="bab4">
+                <h3>✅ BAB IV</h3>
+                <p>Hasil & Pembahasan</p>
+            </div>
+            <div class="node node-sub" id="bab4-1" style="right: 10px; top: 340px;">
+                <h3>111 Requirements</h3>
+            </div>
+            <div class="node node-sub" id="bab4-2" style="right: 10px; top: 400px;">
+                <h3>16 Modul API</h3>
+            </div>
+            <div class="node node-sub" id="bab4-3" style="right: 10px; top: 460px;">
+                <h3>128 Test Cases</h3>
+            </div>
+            <div class="node node-sub" id="bab4-4" style="right: 10px; top: 520px;">
+                <h3>100% Success Rate</h3>
+            </div>
+
+            <!-- BAB V - KESIMPULAN (Bottom) -->
+            <div class="node node-bab5" id="bab5" style="left: 50%; bottom: 80px; transform: translateX(-50%);"
+                data-tooltip="bab5">
+                <h3>📝 BAB V</h3>
+                <p>Kesimpulan & Saran</p>
+            </div>
+            <div class="node node-sub" id="bab5-1" style="left: 320px; bottom: 20px;">
+                <h3>Pencapaian Tujuan</h3>
+            </div>
+            <div class="node node-sub" id="bab5-2" style="left: 480px; bottom: 20px;">
+                <h3>Kontribusi</h3>
+            </div>
+            <div class="node node-sub" id="bab5-3" style="right: 480px; bottom: 20px;">
+                <h3>Saran Jangka Pendek</h3>
+            </div>
+            <div class="node node-sub" id="bab5-4" style="right: 320px; bottom: 20px;">
+                <h3>Saran Jangka Panjang</h3>
+            </div>
+
+            <!-- TEKNOLOGI (Top) -->
+            <div class="node node-sub" id="tech1" style="left: 380px; top: 40px;">
+                <h3>⚛️ React.js 18</h3>
+            </div>
+            <div class="node node-sub" id="tech2" style="left: 520px; top: 40px;">
+                <h3>▲ Next.js 14</h3>
+            </div>
+            <div class="node node-sub" id="tech3" style="right: 520px; top: 40px;">
+                <h3>🟢 Node.js 20</h3>
+            </div>
+            <div class="node node-sub" id="tech4" style="right: 380px; top: 40px;">
+                <h3>🍃 MongoDB Atlas</h3>
+            </div>
+
+            <!-- ROLES (Bottom-Left & Right) -->
+            <div class="node node-sub" id="role1" style="left: 250px; bottom: 150px;">
+                <h3>👨‍💼 Admin</h3>
+            </div>
+            <div class="node node-sub" id="role2" style="left: 400px; bottom: 150px;">
+                <h3>👨‍🏫 Guru</h3>
+            </div>
+            <div class="node node-sub" id="role3" style="right: 400px; bottom: 150px;">
+                <h3>👨‍🎓 Siswa</h3>
+            </div>
+            <div class="node node-sub" id="role4" style="right: 250px; bottom: 150px;">
+                <h3>👪 Orang Tua</h3>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <!-- Legend -->
+    <div class="legend">
+        <h4>📌 Legenda</h4>
+        <div class="legend-item">
+            <div class="legend-color" style="background: var(--node-bab1);"></div>
+            <span>BAB I - Pendahuluan</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: var(--node-bab2);"></div>
+            <span>BAB II - Tinjauan Pustaka</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: var(--node-bab3);"></div>
+            <span>BAB III - Metodologi</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: var(--node-bab4);"></div>
+            <span>BAB IV - Hasil</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: var(--node-bab5);"></div>
+            <span>BAB V - Kesimpulan</span>
+        </div>
+    </div>
+
+    <!-- Info Panel -->
+    <div class="info-panel">
+        <h4>💡 Interaksi</h4>
+        <p>Arahkan kursor ke node untuk melihat detail lebih lanjut. Klik node BAB untuk informasi lengkap.</p>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+        <button class="control-btn" onclick="window.print()" title="Print">🖨️</button>
+        <button class="control-btn" onclick="location.reload()" title="Reset">🔄</button>
+    </div>
+
+    <script>
+        // Tooltip data
+        const tooltipData = {
+            thesis: {
+                title: 'Sistem Informasi Akademik Siswa (SIAS)',
+                items: [
+                    'Studi Kasus: SMK Negeri 2 Makassar',
+                    'Teknologi: MERN Stack + Next.js',
+                    'Database: MongoDB Atlas (NoSQL)',
+                    '4 Role: Admin, Guru, Siswa, Orang Tua',
+                    '111 Functional Requirements'
+                ]
+            },
+            bab1: {
+                title: 'BAB I - Pendahuluan',
+                items: [
+                    'Rekapitulasi nilai manual dengan spreadsheet',
+                    'Data terfragmentasi di file masing-masing guru',
+                    'Orang tua tidak punya akses real-time',
+                    'Konsolidasi nilai semester 2-3 hari',
+                    'Membutuhkan sistem terpusat berbasis web'
+                ]
+            },
+            bab2: {
+                title: 'BAB II - Tinjauan Pustaka',
+                items: [
+                    'Studi literatur SIA sekolah sebelumnya',
+                    'Perbandingan arsitektur SQL vs NoSQL',
+                    'Keunggulan MERN Stack untuk web apps',
+                    'Next.js untuk SSR & API Routes',
+                    'JWT Authentication untuk keamanan'
+                ]
+            },
+            bab3: {
+                title: 'BAB III - Metodologi',
+                items: [
+                    'Model Waterfall: Requirements → Design → Implementation → Testing → Deployment',
+                    'Use Case Diagram untuk 4 aktor',
+                    'ERD dengan 12+ entitas utama',
+                    'UI/UX Design dengan Figma',
+                    'Deployment: Vercel + MongoDB Atlas'
+                ]
+            },
+            bab4: {
+                title: 'BAB IV - Hasil & Pembahasan',
+                items: [
+                    '16 Modul API terimplementasi',
+                    '128 Test Cases dengan 100% pass rate',
+                    'Response time rata-rata 200ms',
+                    'Usability score: 4.64/5.0',
+                    'Efisiensi meningkat 85%'
+                ]
+            },
+            bab5: {
+                title: 'BAB V - Kesimpulan & Saran',
+                items: [
+                    'Kedua tujuan penelitian tercapai',
+                    'Integrasi data terpusat berhasil',
+                    'Portal monitoring orang tua real-time',
+                    'Saran: Notifikasi push, mobile app',
+                    'Saran: Integrasi Dapodik, AI analytics'
+                ]
+            }
+        };
+
+        // Generate particles
+        const particlesContainer = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.top = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 15 + 's';
+            particle.style.animationDuration = (10 + Math.random() * 10) + 's';
+            particlesContainer.appendChild(particle);
+        }
+
+        // Tooltip functionality
+        const tooltip = document.getElementById('tooltip');
+        const nodes = document.querySelectorAll('.node[data-tooltip]');
+
+        nodes.forEach(node => {
+            node.addEventListener('mouseenter', (e) => {
+                const key = node.dataset.tooltip;
+                const data = tooltipData[key];
+                if (data) {
+                    tooltip.innerHTML = `
+                        <h4>${data.title}</h4>
+                        <ul>
+                            ${data.items.map(item => `<li>${item}</li>`).join('')}
+                        </ul>
+                    `;
+                    tooltip.classList.add('active');
+                    positionTooltip(e);
+                }
+            });
+
+            node.addEventListener('mousemove', positionTooltip);
+
+            node.addEventListener('mouseleave', () => {
+                tooltip.classList.remove('active');
+            });
+        });
+
+        function positionTooltip(e) {
+            const x = e.pageX + 20;
+            const y = e.pageY + 20;
+
+            // Keep tooltip in viewport
+            const tooltipRect = tooltip.getBoundingClientRect();
+            const maxX = window.innerWidth - tooltipRect.width - 20;
+            const maxY = window.innerHeight - tooltipRect.height - 20;
+
+            tooltip.style.left = Math.min(x, maxX) + 'px';
+            tooltip.style.top = Math.min(y, maxY) + 'px';
+        }
+
+        // Draw connections using SVG
+        function drawConnections() {
+            const svg = document.getElementById('connections');
+            const center = document.getElementById('center');
+            const babs = ['bab1', 'bab2', 'bab3', 'bab4', 'bab5'];
+
+            const centerRect = center.getBoundingClientRect();
+            const wrapperRect = document.getElementById('mindmap').getBoundingClientRect();
+
+            const centerX = centerRect.left - wrapperRect.left + centerRect.width / 2;
+            const centerY = centerRect.top - wrapperRect.top + centerRect.height / 2;
+
+            let lines = '';
+
+            babs.forEach(babId => {
+                const bab = document.getElementById(babId);
+                if (bab) {
+                    const babRect = bab.getBoundingClientRect();
+                    const babX = babRect.left - wrapperRect.left + babRect.width / 2;
+                    const babY = babRect.top - wrapperRect.top + babRect.height / 2;
+
+                    // Create curved path
+                    const midX = (centerX + babX) / 2;
+                    const midY = (centerY + babY) / 2;
+                    const ctrlX = midX + (Math.random() - 0.5) * 50;
+                    const ctrlY = midY + (Math.random() - 0.5) * 50;
+
+                    lines += `<path class="connection-line" d="M${centerX},${centerY} Q${ctrlX},${ctrlY} ${babX},${babY}" />`;
+                }
+            });
+
+            svg.innerHTML = lines;
+        }
+
+        // Initial draw
+        setTimeout(drawConnections, 100);
+        window.addEventListener('resize', drawConnections);
+    </script>
+</body>
+
+</html>

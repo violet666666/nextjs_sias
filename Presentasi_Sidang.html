@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentasi Sidang Tugas Akhir - SIAS</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #0ea5e9;
+            --accent: #8b5cf6;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --light: #f8fafc;
+            --gray: #64748b;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark);
+            color: white;
+            overflow: hidden;
+        }
+        
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            display: none;
+            padding: 60px 80px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .slide.active {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Slide 1 - Cover */
+        .slide-cover {
+            background: linear-gradient(135deg, var(--dark) 0%, #1e293b 50%, var(--primary-dark) 100%);
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .slide-cover::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, transparent 60%);
+            animation: pulse 10s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .university-badge {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .university-badge img {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+        }
+        
+        .university-name {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: var(--secondary);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        
+        .faculty-name {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-bottom: 50px;
+        }
+        
+        .presentation-title {
+            font-size: 2rem;
+            font-weight: 300;
+            color: var(--gray);
+            margin-bottom: 15px;
+        }
+        
+        .thesis-title {
+            font-size: 2.8rem;
+            font-weight: 800;
+            line-height: 1.2;
+            max-width: 900px;
+            margin-bottom: 20px;
+            background: linear-gradient(135deg, white 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .thesis-subtitle {
+            font-size: 1.3rem;
+            color: var(--gray);
+            max-width: 700px;
+            margin-bottom: 60px;
+        }
+        
+        .author-info {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .author-name {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .author-id {
+            font-size: 1rem;
+            color: var(--gray);
+        }
+        
+        .advisor-info {
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        /* Standard Slides */
+        .slide-standard {
+            background: linear-gradient(180deg, var(--dark) 0%, #1e293b 100%);
+        }
+        
+        .slide-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+        
+        .chapter-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 16px;
+            background: rgba(37, 99, 235, 0.2);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+            border-radius: 30px;
+            font-size: 0.85rem;
+            color: var(--secondary);
+        }
+        
+        .slide-number {
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        .slide-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 40px;
+            background: linear-gradient(135deg, white 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .slide-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            flex: 1;
+        }
+        
+        .content-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+        }
+        
+        .content-box h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--secondary);
+        }
+        
+        .content-box ul {
+            list-style: none;
+        }
+        
+        .content-box li {
+            position: relative;
+            padding-left: 25px;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.85);
+        }
+        
+        .content-box li::before {
+            content: '→';
+            position: absolute;
+            left: 0;
+            color: var(--primary);
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+            border: 1px solid rgba(37, 99, 235, 0.3);
+        }
+        
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+        
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+        
+        .tech-stack {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .tech-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 0.95rem;
+        }
+        
+        .tech-icon {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        
+        .role-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+        }
+        
+        .role-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        .role-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .role-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .role-features {
+            font-size: 0.85rem;
+            color: var(--gray);
+            line-height: 1.6;
+        }
+        
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            padding: 40px 0;
+        }
+        
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 70px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 50%, var(--accent) 100%);
+            border-radius: 2px;
+        }
+        
+        .timeline-item {
+            text-align: center;
+            flex: 1;
+            position: relative;
+        }
+        
+        .timeline-dot {
+            width: 20px;
+            height: 20px;
+            background: var(--primary);
+            border: 4px solid var(--dark);
+            border-radius: 50%;
+            margin: 20px auto 15px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .timeline-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .timeline-desc {
+            font-size: 0.8rem;
+            color: var(--gray);
+        }
+        
+        .table-container {
+            overflow-x: auto;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        
+        th, td {
+            padding: 15px 20px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        th {
+            background: rgba(37, 99, 235, 0.2);
+            font-weight: 600;
+            color: var(--secondary);
+        }
+        
+        tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        
+        .status-pass {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--success);
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        
+        .comparison-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 30px;
+        }
+        
+        .comparison-card.before {
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        
+        .comparison-card.after {
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+        
+        .comparison-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .comparison-badge.before {
+            background: rgba(239, 68, 68, 0.2);
+            color: var(--danger);
+        }
+        
+        .comparison-badge.after {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--success);
+        }
+        
+        /* Navigation */
+        .nav-footer {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            z-index: 100;
+        }
+        
+        .nav-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .nav-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .progress-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+            transition: width 0.3s ease;
+        }
+        
+        /* Slide Thank You */
+        .slide-thankyou {
+            background: linear-gradient(135deg, var(--dark) 0%, #1e293b 50%, var(--accent) 100%);
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .thankyou-title {
+            font-size: 4rem;
+            font-weight: 800;
+            margin-bottom: 30px;
+            background: linear-gradient(135deg, white 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .qa-text {
+            font-size: 1.5rem;
+            color: var(--gray);
+            margin-bottom: 50px;
+        }
+        
+        .contact-info {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 25px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            font-size: 0.95rem;
+        }
+        
+        /* Print styles for PPT export */
+        @media print {
+            .slide {
+                page-break-after: always;
+                display: flex !important;
+            }
+            .nav-footer, .progress-bar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Slide 1: Cover -->
+    <div class="slide slide-cover active">
+        <div class="university-badge">
+            <div class="university-name">Universitas Pertamina</div>
+            <div class="faculty-name">Fakultas Sains dan Ilmu Komputer • Program Studi Ilmu Komputer</div>
+        </div>
+        
+        <div class="presentation-title">SIDANG TUGAS AKHIR</div>
+        <h1 class="thesis-title">Sistem Informasi Akademik Siswa (SIAS) Berbasis Web Menggunakan Teknologi MERN Stack</h1>
+        <p class="thesis-subtitle">Studi Kasus: SMK Negeri 2 Makassar</p>
+        
+        <div class="author-info">
+            <div class="author-name">Ade Irawan</div>
+            <div class="author-id">NIM: 13203013</div>
+        </div>
+        
+        <div class="advisor-info">
+            Pembimbing: [Nama Dosen Pembimbing]
+        </div>
+    </div>
+    
+    <!-- Slide 2: Outline -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">📋 DAFTAR ISI</span>
+            <span class="slide-number">2 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Outline Presentasi</h2>
+        
+        <div class="content-grid">
+            <div class="content-box">
+                <h3>Bagian Pertama</h3>
+                <ul>
+                    <li>BAB I: Pendahuluan & Latar Belakang</li>
+                    <li>BAB II: Tinjauan Pustaka</li>
+                    <li>BAB III: Metodologi & Perancangan</li>
+                </ul>
+            </div>
+            <div class="content-box">
+                <h3>Bagian Kedua</h3>
+                <ul>
+                    <li>BAB IV: Hasil & Pembahasan</li>
+                    <li>BAB V: Kesimpulan & Saran</li>
+                    <li>Demo Aplikasi</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Slide 3: Latar Belakang -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">📖 BAB I</span>
+            <span class="slide-number">3 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Latar Belakang Masalah</h2>
+        
+        <div class="content-grid">
+            <div class="content-box highlight-box">
+                <h3>Kondisi Saat Ini (As-Is)</h3>
+                <ul>
+                    <li>Rekapitulasi nilai manual menggunakan spreadsheet</li>
+                    <li>Data terfragmentasi di file masing-masing guru</li>
+                    <li>Orang tua tidak memiliki akses real-time</li>
+                    <li>Risiko kehilangan data dan human error tinggi</li>
+                    <li>Proses konsolidasi nilai semester memakan waktu 2-3 hari</li>
+                </ul>
+            </div>
+            <div class="content-box">
+                <h3>Kebutuhan Solusi</h3>
+                <ul>
+                    <li>Sistem terpusat untuk manajemen data akademik</li>
+                    <li>Platform monitoring real-time untuk orang tua</li>
+                    <li>Otomatisasi perhitungan nilai dan kehadiran</li>
+                    <li>Akses multi-role (Admin, Guru, Siswa, Orang Tua)</li>
+                    <li>Arsitektur modern yang scalable</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Slide 4: Rumusan Masalah & Tujuan -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">🎯 BAB I</span>
+            <span class="slide-number">4 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Rumusan Masalah & Tujuan</h2>
+        
+        <div class="content-grid">
+            <div class="content-box">
+                <h3>Rumusan Masalah</h3>
+                <ul>
+                    <li>Bagaimana rancangan arsitektur sistem informasi akademik yang mampu mengintegrasikan data siswa, nilai, dan presensi secara terpusat?</li>
+                    <li>Bagaimana mengimplementasikan fitur monitoring akademik berbasis web yang dapat diakses secara real-time oleh orang tua siswa?</li>
+                </ul>
+            </div>
+            <div class="content-box highlight-box">
+                <h3>Tujuan Penelitian</h3>
+                <ul>
+                    <li>Menghasilkan SIAS yang mengintegrasikan manajemen data nilai, presensi, dan data siswa dalam satu basis data terpusat</li>
+                    <li>Menghasilkan aplikasi web menggunakan MERN Stack dengan antarmuka akses khusus bagi guru, siswa, dan orang tua</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Slide 5: Tinjauan Pustaka -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">📚 BAB II</span>
+            <span class="slide-number">5 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Tinjauan Pustaka & State of The Art</h2>
+        
+        <div class="table-container" style="flex: 1;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Peneliti</th>
+                        <th>Teknologi</th>
+                        <th>Fokus</th>
+                        <th>Keterbatasan</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Lutviana, dkk. (2023)</td>
+                        <td>PHP, MySQL</td>
+                        <td>SIA Sekolah Dasar</td>
+                        <td>Belum ada notifikasi real-time</td>
+                    </tr>
+                    <tr>
+                        <td>Kamal & Gunaryati (2023)</td>
+                        <td>MERN Stack</td>
+                        <td>SIA Web</td>
+                        <td>Belum diterapkan pada SMK</td>
+                    </tr>
+                    <tr>
+                        <td>Haryati (2019)</td>
+                        <td>PHP Framework</td>
+                        <td>SIA SMP</td>
+                        <td>Arsitektur monolitik</td>
+                    </tr>
+                    <tr style="background: rgba(37, 99, 235, 0.1);">
+                        <td><strong>Penelitian Ini</strong></td>
+                        <td><strong>Next.js, MongoDB</strong></td>
+                        <td><strong>SIA SMK + Monitoring Ortu</strong></td>
+                        <td><strong>Mengisi celah dengan NoSQL + real-time</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Slide 6: Metodologi -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">⚙️ BAB III</span>
+            <span class="slide-number">6 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Metodologi Pengembangan: Waterfall</h2>
+        
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-title">1. Requirement Definition</div>
+                <div class="timeline-dot"></div>
+                <div class="timeline-desc">Wawancara stakeholder, elisitasi kebutuhan</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-title">2. System Design</div>
+                <div class="timeline-dot"></div>
+                <div class="timeline-desc">Use Case, ERD, UI/UX Design</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-title">3. Implementation</div>
+                <div class="timeline-dot"></div>
+                <div class="timeline-desc">Coding dengan MERN Stack + Next.js</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-title">4. Testing</div>
+                <div class="timeline-dot"></div>
+                <div class="timeline-desc">Unit Test, Integration, Black-Box</div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-title">5. Deployment</div>
+                <div class="timeline-dot"></div>
+                <div class="timeline-desc">Vercel + MongoDB Atlas</div>
+            </div>
+        </div>
+        
+        <div class="content-box" style="margin-top: 30px;">
+            <h3>Alasan Pemilihan Waterfall</h3>
+            <ul style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                <li>Kebutuhan sistem stabil (kurikulum baku)</li>
+                <li>Dokumentasi lengkap untuk tugas akhir</li>
+                <li>Scope proyek jelas dan terukur</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Slide 7: Tech Stack -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">🛠️ BAB III</span>
+            <span class="slide-number">7 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Arsitektur Teknologi</h2>
+        
+        <div class="tech-stack" style="margin-bottom: 30px;">
+            <div class="tech-item">
+                <span class="tech-icon">⚛️</span>
+                <span>React.js 18</span>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">▲</span>
+                <span>Next.js 14</span>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">🟢</span>
+                <span>Node.js 20</span>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">🍃</span>
+                <span>MongoDB Atlas</span>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">🔐</span>
+                <span>JWT Auth</span>
+            </div>
+            <div class="tech-item">
+                <span class="tech-icon">🚀</span>
+                <span>Vercel</span>
+            </div>
+        </div>
+        
+        <div class="content-grid">
+            <div class="content-box">
+                <h3>Keunggulan MongoDB (NoSQL)</h3>
+                <ul>
+                    <li>Schema fleksibel untuk data nilai dinamis</li>
+                    <li>Skalabilitas horizontal dengan sharding</li>
+                    <li>Performance tinggi untuk read-heavy operations</li>
+                </ul>
+            </div>
+            <div class="content-box">
+                <h3>Keunggulan Next.js</h3>
+                <ul>
+                    <li>Server-Side Rendering (SSR) untuk performa</li>
+                    <li>API Routes untuk backend terintegrasi</li>
+                    <li>Optimisasi otomatis (bundling, caching)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Slide 8: Fitur Per Role -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">👥 BAB III</span>
+            <span class="slide-number">8 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Fitur Sistem per Role</h2>
+        
+        <div class="role-grid">
+            <div class="role-card">
+                <div class="role-icon">👨‍💼</div>
+                <div class="role-name">Admin</div>
+                <div class="role-features">Manajemen pengguna, kelas, mata pelajaran, laporan, backup</div>
+            </div>
+            <div class="role-card">
+                <div class="role-icon">👨‍🏫</div>
+                <div class="role-name">Guru</div>
+                <div class="role-features">Input nilai, kehadiran, tugas, pengumuman, rekap kelas</div>
+            </div>
+            <div class="role-card">
+                <div class="role-icon">👨‍🎓</div>
+                <div class="role-name">Siswa</div>
+                <div class="role-features">Lihat nilai, kehadiran, upload tugas, notifikasi</div>
+            </div>
+            <div class="role-card">
+                <div class="role-icon">👪</div>
+                <div class="role-name">Orang Tua</div>
+                <div class="role-features">Monitoring real-time: nilai, kehadiran, tugas anak</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Slide 9: Hasil Implementasi -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">✅ BAB IV</span>
+            <span class="slide-number">9 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Hasil Implementasi</h2>
+        
+        <div class="stat-grid">
+            <div class="stat-card">
+                <div class="stat-value">111</div>
+                <div class="stat-label">Functional Requirements</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">16</div>
+                <div class="stat-label">Modul API</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">128</div>
+                <div class="stat-label">Test Cases</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">100%</div>
+                <div class="stat-label">Success Rate</div>
+            </div>
+        </div>
+        
+        <div class="content-box" style="margin-top: 30px;">
+            <h3>Modul yang Diimplementasikan</h3>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; font-size: 0.9rem;">
+                <span>✓ Authentication</span>
+                <span>✓ User Management</span>
+                <span>✓ Class Management</span>
+                <span>✓ Subject Management</span>
+                <span>✓ Assignment</span>
+                <span>✓ Submission</span>
+                <span>✓ Attendance</span>
+                <span>✓ Grades</span>
+                <span>✓ Reports/Rekap</span>
+                <span>✓ Notification</span>
+                <span>✓ Bulletin</span>
+                <span>✓ Parent-Child</span>
+                <span>✓ File Management</span>
+                <span>✓ Discussion</span>
+                <span>✓ Analytics</span>
+                <span>✓ Audit Logs</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Slide 10: Hasil Pengujian -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">🧪 BAB IV</span>
+            <span class="slide-number">10 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Hasil Pengujian</h2>
+        
+        <div class="content-grid">
+            <div class="content-box">
+                <h3>Pengujian Fungsionalitas</h3>
+                <table style="font-size: 0.85rem;">
+                    <tr>
+                        <td>Authentication</td>
+                        <td><span class="status-pass">✓ 7/7 Pass</span></td>
+                    </tr>
+                    <tr>
+                        <td>User Management</td>
+                        <td><span class="status-pass">✓ 11/11 Pass</span></td>
+                    </tr>
+                    <tr>
+                        <td>Class Management</td>
+                        <td><span class="status-pass">✓ 11/11 Pass</span></td>
+                    </tr>
+                    <tr>
+                        <td>Grade Management</td>
+                        <td><span class="status-pass">✓ 8/8 Pass</span></td>
+                    </tr>
+                    <tr>
+                        <td>Attendance</td>
+                        <td><span class="status-pass">✓ 11/11 Pass</span></td>
+                    </tr>
+                </table>
+            </div>
+            <div class="content-box">
+                <h3>Pengujian Performa</h3>
+                <table style="font-size: 0.85rem;">
+                    <tr>
+                        <td>Login API</td>
+                        <td>150 ms</td>
+                    </tr>
+                    <tr>
+                        <td>Get Kelas</td>
+                        <td>200 ms</td>
+                    </tr>
+                    <tr>
+                        <td>Get Grades</td>
+                        <td>250 ms</td>
+                    </tr>
+                    <tr>
+                        <td>Dashboard</td>
+                        <td>280 ms</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Average</strong></td>
+                        <td><strong>200 ms</strong> (target &lt;2s)</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Slide 11: Usability Testing -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">📊 BAB IV</span>
+            <span class="slide-number">11 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Pengujian Kegunaan (Usability)</h2>
+        
+        <div class="stat-grid" style="margin-bottom: 30px;">
+            <div class="stat-card">
+                <div class="stat-value">4.6</div>
+                <div class="stat-label">Kemudahan Navigasi</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">4.5</div>
+                <div class="stat-label">Kemudahan Pembelajaran</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">4.7</div>
+                <div class="stat-label">Efisiensi Penggunaan</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">4.8</div>
+                <div class="stat-label">Responsiveness</div>
+            </div>
+        </div>
+        
+        <div class="content-box highlight-box" style="text-align: center;">
+            <h3 style="font-size: 1.5rem;">Rata-rata Kepuasan Pengguna</h3>
+            <div style="font-size: 3rem; font-weight: 800; color: var(--success);">4.64 / 5.0</div>
+            <p style="color: var(--gray); margin-top: 10px;">Berdasarkan feedback dari guru, siswa, dan orang tua</p>
+        </div>
+    </div>
+    
+    <!-- Slide 12: Perbandingan Efisiensi -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">📈 BAB IV</span>
+            <span class="slide-number">12 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Peningkatan Efisiensi</h2>
+        
+        <div class="comparison-grid">
+            <div class="comparison-card before">
+                <div class="comparison-header">
+                    <span class="comparison-badge before">❌ BEFORE (Manual)</span>
+                </div>
+                <ul style="padding-left: 20px; color: var(--gray);">
+                    <li>Rekapitulasi nilai: <strong>2-3 hari</strong></li>
+                    <li>Pencatatan kehadiran: <strong>5-10 menit/kelas + 2-3 jam rekapitulasi bulanan</strong></li>
+                    <li>Akses informasi orang tua: <strong>Berhari-hari menunggu</strong></li>
+                    <li>Risiko human error tinggi</li>
+                </ul>
+            </div>
+            <div class="comparison-card after">
+                <div class="comparison-header">
+                    <span class="comparison-badge after">✅ AFTER (Sistem)</span>
+                </div>
+                <ul style="padding-left: 20px; color: var(--gray);">
+                    <li>Rekapitulasi nilai: <strong>30 menit - 1 jam</strong></li>
+                    <li>Pencatatan kehadiran: <strong>1-2 menit/kelas</strong></li>
+                    <li>Akses informasi orang tua: <strong>Real-time 24/7</strong></li>
+                    <li>Perhitungan otomatis, akurat</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="stat-grid" style="margin-top: 30px;">
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--success);">85%</div>
+                <div class="stat-label">Penghematan Waktu</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--success);">98%</div>
+                <div class="stat-label">Akurasi Data</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--success);">99.95%</div>
+                <div class="stat-label">System Uptime</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" style="color: var(--success);">100%</div>
+                <div class="stat-label">Transparansi</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Slide 13: Kesimpulan -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">📝 BAB V</span>
+            <span class="slide-number">13 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Kesimpulan</h2>
+        
+        <div class="content-box highlight-box" style="margin-bottom: 20px;">
+            <h3>Pencapaian Tujuan Penelitian</h3>
+            <ul>
+                <li><strong>Tujuan 1 ✓</strong>: Berhasil menghasilkan SIAS yang mengintegrasikan manajemen data nilai, presensi, dan data siswa dalam satu basis data terpusat menggunakan MongoDB Atlas.</li>
+                <li><strong>Tujuan 2 ✓</strong>: Berhasil menghasilkan aplikasi web menggunakan MERN Stack + Next.js dengan antarmuka akses khusus untuk 4 role (Admin, Guru, Siswa, Orang Tua).</li>
+            </ul>
+        </div>
+        
+        <div class="content-box">
+            <h3>Kontribusi Penelitian</h3>
+            <ul>
+                <li>Implementasi arsitektur NoSQL (MongoDB) untuk fleksibilitas data kurikulum SMK</li>
+                <li>Portal monitoring real-time untuk orang tua meningkatkan transparansi pendidikan</li>
+                <li>Efisiensi proses administratif meningkat 85% dibanding proses manual</li>
+                <li>111 Functional Requirements dengan 100% test coverage terpenuhi</li>
+            </ul>
+        </div>
+    </div>
+    
+    <!-- Slide 14: Saran -->
+    <div class="slide slide-standard">
+        <div class="slide-header">
+            <span class="chapter-badge">💡 BAB V</span>
+            <span class="slide-number">14 / 15</span>
+        </div>
+        
+        <h2 class="slide-title">Saran Pengembangan</h2>
+        
+        <div class="content-grid">
+            <div class="content-box">
+                <h3>Pengembangan Jangka Pendek</h3>
+                <ul>
+                    <li>Implementasi fitur notifikasi push untuk mobile</li>
+                    <li>Integrasi dengan sistem jadwal pelajaran</li>
+                    <li>Fitur ekspor rapor digital (e-rapor)</li>
+                    <li>Dashboard analytics yang lebih komprehensif</li>
+                </ul>
+            </div>
+            <div class="content-box">
+                <h3>Pengembangan Jangka Panjang</h3>
+                <ul>
+                    <li>Aplikasi mobile native (iOS/Android)</li>
+                    <li>Integrasi dengan Dapodik Kemendikbud</li>
+                    <li>Fitur video conference untuk pembelajaran online</li>
+                    <li>AI-based analytics untuk prediksi performa siswa</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Slide 15: Thank You -->
+    <div class="slide slide-thankyou">
+        <h1 class="thankyou-title">Terima Kasih</h1>
+        <p class="qa-text">Sesi Tanya Jawab</p>
+        
+        <div class="contact-info">
+            <div class="contact-item">
+                <span>📧</span>
+                <span>ade.irawan@student.universitaspertamina.ac.id</span>
+            </div>
+            <div class="contact-item">
+                <span>🎓</span>
+                <span>NIM: 13203013</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Navigation -->
+    <div class="nav-footer">
+        <button class="nav-btn" onclick="prevSlide()">←</button>
+        <button class="nav-btn" onclick="nextSlide()">→</button>
+    </div>
+    
+    <div class="progress-bar" id="progressBar"></div>
+    
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        
+        function showSlide(index) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[index].classList.add('active');
+            updateProgress();
+        }
+        
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % totalSlides;
+            showSlide(currentSlide);
+        }
+        
+        function prevSlide() {
+            currentSlide = (currentSlide - 1 + totalSlides) % totalSlides;
+            showSlide(currentSlide);
+        }
+        
+        function updateProgress() {
+            const progress = ((currentSlide + 1) / totalSlides) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+        }
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                prevSlide();
+            }
+        });
+        
+        // Initialize
+        updateProgress();
+    </script>
+</body>
+</html>
