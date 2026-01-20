@@ -21,6 +21,7 @@ const CpanelNavbar = ({ onRoleChange }) => {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [recentActivities, setRecentActivities] = useState([]);
   const [notifLoading, setNotifLoading] = useState(false);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounce(search, 300);
@@ -94,10 +95,20 @@ const CpanelNavbar = ({ onRoleChange }) => {
   const fetchNotifications = async () => {
     setNotifLoading(true);
     try {
-      const res = await fetchWithAuth("/api/notifications?limit=10");
-      if (res.ok) {
-        const data = await res.json();
+      // Fetch both notifications and recent activities
+      const [notifRes, activityRes] = await Promise.all([
+        fetchWithAuth("/api/notifications?limit=10"),
+        fetchWithAuth("/api/notifications/recentActivity")
+      ]);
+
+      if (notifRes.ok) {
+        const data = await notifRes.json();
         setNotifications(data.notifications || []);
+      }
+
+      if (activityRes.ok) {
+        const activityData = await activityRes.json();
+        setRecentActivities(activityData.activities || []);
       }
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -310,12 +321,39 @@ const CpanelNavbar = ({ onRoleChange }) => {
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
                     <span className="text-sm mt-2 block">Memuat...</span>
                   </div>
-                ) : notifications.length === 0 ? (
+                ) : notifications.length === 0 && recentActivities.length === 0 ? (
                   <div className="p-8 text-gray-500 text-center">
                     <svg className="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                     </svg>
                     <span className="text-sm">Tidak ada notifikasi</span>
+                  </div>
+                ) : notifications.length === 0 && recentActivities.length > 0 ? (
+                  <div className="max-h-80 overflow-y-auto">
+                    <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600">
+                      <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">✨ Aktivitas Terbaru</span>
+                    </div>
+                    <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {recentActivities.map((activity, idx) => (
+                        <li key={idx} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                          <div className="flex items-start space-x-3">
+                            <div className="p-2 rounded-full bg-gradient-to-r from-blue-100 to-indigo-100 dark:from-blue-900/30 dark:to-indigo-900/30 flex-shrink-0">
+                              <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm text-gray-900 dark:text-gray-100">{activity.message}</p>
+                              <p className="text-xs text-gray-400 mt-1">
+                                {activity.timestamp ? new Date(activity.timestamp).toLocaleString('id-ID', {
+                                  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+                                }) : ''}
+                              </p>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 ) : (
                   <ul className="max-h-80 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-700">
@@ -329,10 +367,10 @@ const CpanelNavbar = ({ onRoleChange }) => {
                         <div className="flex items-start space-x-3">
                           {/* Notification Type Icon */}
                           <div className={`p-2 rounded-full flex-shrink-0 ${notif.type === 'task' || notif.type === 'assignment' ? 'bg-indigo-100 text-indigo-600' :
-                              notif.type === 'grade' ? 'bg-green-100 text-green-600' :
-                                notif.type === 'attendance' ? 'bg-yellow-100 text-yellow-600' :
-                                  notif.type === 'announcement' ? 'bg-purple-100 text-purple-600' :
-                                    'bg-blue-100 text-blue-600'
+                            notif.type === 'grade' ? 'bg-green-100 text-green-600' :
+                              notif.type === 'attendance' ? 'bg-yellow-100 text-yellow-600' :
+                                notif.type === 'announcement' ? 'bg-purple-100 text-purple-600' :
+                                  'bg-blue-100 text-blue-600'
                             }`}>
                             {notif.type === 'task' || notif.type === 'assignment' ? (
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
