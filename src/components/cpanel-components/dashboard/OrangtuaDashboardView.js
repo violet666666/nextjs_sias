@@ -117,9 +117,36 @@ export default function OrangtuaDashboardView({ user }) {
     if (!selectedAnak) return;
     async function fetchMapelTugasAbsensi() {
       setLoading(true);
+      setError("");
       try {
-        const kelasId = selectedAnak.siswa_id?.kelas_id || selectedAnak.siswa_id?.kelas || selectedAnak.kelas_id;
-        if (!kelasId) throw new Error("Kelas anak tidak ditemukan");
+        const siswaId = selectedAnak.siswa_id?._id || selectedAnak.siswa_id;
+
+        // Try to get kelas_id from various sources
+        let kelasId = selectedAnak.siswa_id?.kelas_id || selectedAnak.siswa_id?.kelas || selectedAnak.kelas_id;
+
+        // If kelas_id not found directly, try to get from enrollment
+        if (!kelasId && siswaId) {
+          try {
+            const enrollRes = await fetchWithAuth(`/api/enrollment?siswa_id=${siswaId}`);
+            if (enrollRes.ok) {
+              const enrollData = await enrollRes.json();
+              if (Array.isArray(enrollData) && enrollData.length > 0) {
+                kelasId = enrollData[0].kelas_id?._id || enrollData[0].kelas_id;
+              }
+            }
+          } catch (e) {
+            console.warn("Could not fetch enrollment:", e);
+          }
+        }
+
+        if (!kelasId) {
+          // If still no kelas, show friendly message instead of hard error
+          setMapelList([]);
+          setError("Data kelas anak belum tersedia. Hubungi admin.");
+          setLoading(false);
+          return;
+        }
+
         // Ambil daftar mapel
         const mapelRes = await fetchWithAuth(`/api/subjects?kelas_id=${kelasId}`);
         if (!mapelRes.ok) throw new Error("Gagal mengambil data mapel anak");

@@ -182,16 +182,20 @@ export async function GET(request) {
 
         } else if (role === 'orangtua') {
             // Orangtua: Child grades, attendance
-            const orangtua = await Orangtua.findOne({ user_id: userId }).lean();
-            if (orangtua && orangtua.siswa_ids?.length > 0) {
+            // Note: Orangtua model has siswa_id (singular), one entry per child
+            // A parent with multiple children has multiple Orangtua entries
+            const orangtuaEntries = await Orangtua.find({ user_id: userId }).lean();
+            const siswaIds = orangtuaEntries.map(o => o.siswa_id).filter(Boolean);
+
+            if (siswaIds.length > 0) {
                 const [childGrades, childAttendance] = await Promise.all([
-                    Submission.find({ siswa_id: { $in: orangtua.siswa_ids }, nilai: { $exists: true } })
+                    Submission.find({ siswa_id: { $in: siswaIds }, nilai: { $exists: true } })
                         .sort({ updatedAt: -1 })
                         .limit(3)
                         .populate('siswa_id', 'nama')
                         .populate('tugas_id', 'judul')
                         .lean(),
-                    Kehadiran.find({ siswa_id: { $in: orangtua.siswa_ids } })
+                    Kehadiran.find({ siswa_id: { $in: siswaIds } })
                         .sort({ tanggal: -1 })
                         .limit(3)
                         .populate('siswa_id', 'nama')
