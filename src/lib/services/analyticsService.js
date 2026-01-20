@@ -27,15 +27,23 @@ class AnalyticsService {
 
     // Role-specific stats
     if (role === 'admin') {
+      const gradeStats = await this.getGradeStats();
+
       return {
         ...baseStats,
+        activeClasses: await Kelas.countDocuments({ status_kelas: 'Aktif' }),
+        completionRate: await this.getCompletionRate(),
+        averageGrade: gradeStats.average ? Math.round(gradeStats.average) : 0,
         usersByRole: await this.getUsersByRole(),
         classesByStatus: await this.getClassesByStatus(),
         assignmentsByStatus: await this.getAssignmentsByStatus(),
         attendanceStats: await this.getAttendanceStats(),
-        gradeStats: await this.getGradeStats(),
+        gradeStats: gradeStats,
         monthlyGrowth: await this.getMonthlyGrowth(),
         recentActivity: await this.getRecentActivity(),
+        attendanceTrend: await this.getAttendanceTrend(),
+        gradeDistribution: await this.getGradeDistribution(),
+        subjectPerformance: await this.getSubjectPerformance(),
       };
     } else if (role === 'guru') {
       return {
@@ -615,6 +623,88 @@ class AnalyticsService {
       .limit(5)
       .populate('siswa_id tugas_id');
     return grades;
+  }
+
+  // Admin Chart Helpers
+  static async getAttendanceTrend() {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const result = await Kehadiran.aggregate([
+      { $match: { tanggal: { $gte: sevenDaysAgo } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: "%Y-%m-%d", date: "$tanggal" } },
+          present: { $sum: { $cond: [{ $eq: ["$status", "Hadir"] }, 1, 0] } },
+          absent: { $sum: { $cond: [{ $ne: ["$status", "Hadir"] }, 1, 0] } }
+        }
+      },
+      { $sort: { _id: 1 } },
+      { $project: { date: "$_id", present: 1, absent: 1, _id: 0 } }
+    ]);
+    return result;
+  }
+
+  static async getGradeDistribution() {
+    return await Submission.aggregate([
+      { $match: { nilai: { $exists: true } } },
+      {
+        $project: {
+          range: {
+            $switch: {
+              branches: [
+                { case: { $gte: ["$nilai", 85] }, then: "A" },
+                { case: { $gte: ["$nilai", 70] }, then: "B" },
+                { case: { $gte: ["$nilai", 55] }, then: "C" },
+                { case: { $gte: ["$nilai", 40] }, then: "D" }
+              ],
+              default: "E"
+            }
+          }
+        }
+      },
+      { $group: { _id: "$range", value: { $sum: 1 } } },
+      { $project: { name: "$_id", value: 1, _id: 0 } },
+      { $sort: { name: 1 } }
+    ]);
+  }
+
+  static async getSubjectPerformance() {
+    // Note: Assuming 'tugas' and 'mata_pelajarans' collection names
+    return await Submission.aggregate([
+      {
+        $lookup: {
+          from: "tugas",
+          localField: "tugas_id",
+          foreignField: "_id",
+          as: "tugas"
+        }
+      },
+      { $unwind: "$tugas" },
+      {
+        $lookup: {
+          from: "mata_pelajarans",
+          localField: "tugas.mata_pelajaran_id",
+          foreignField: "_id",
+          as: "mapel"
+        }
+      },
+      { $unwind: "$mapel" },
+      {
+        $group: {
+          _id: "$mapel.nama_pelajaran",
+          score: { $avg: "$nilai" }
+        }
+      },
+      { $project: { subject: "$_id", score: { $round: ["$score", 0] }, _id: 0, fullMark: 100 } },
+      { $limit: 6 }
+    ]);
+  }
+
+  static async getCompletionRate() {
+    const total = await Submission.countDocuments();
+    const graded = await Submission.countDocuments({ nilai: { $exists: true } });
+    return total > 0 ? Math.round((graded / total) * 100) : 0;
   }
 }
 

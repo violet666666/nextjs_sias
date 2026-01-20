@@ -17,7 +17,7 @@ export async function GET(request) {
 
     // Query dinamis sesuai role
     const stats = await AnalyticsService.getDashboardStats(role, userId);
-    return NextResponse.json({ success: true, stats });
+    return NextResponse.json(stats);
   } catch (err) {
     console.error('API /api/analytics/dashboard error:', err);
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
