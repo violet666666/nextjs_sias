@@ -9,7 +9,7 @@ export async function POST(request) {
   const { email, password } = await request.json();
   // Validasi input dengan Joi
   const schema = Joi.object({
-    email: Joi.string().email().required(),
+    email: Joi.string().email({ tlds: { allow: false } }).required(),
     password: Joi.string().min(8).max(100).required()
   });
   const { error } = schema.validate({ email, password });
