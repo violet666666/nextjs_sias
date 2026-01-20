@@ -18,24 +18,22 @@ try {
   getIO = null;
 }
 
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// App Router uses route segment config, not Pages API config
+// bodyParser is automatically disabled in App Router for FormData
+export const dynamic = 'force-dynamic';
 
 // Helper: Cek admin
-    // async function isAdmin(userId) { // Tidak diperlukan lagi jika menggunakan middleware
-    //   const user = await User.findById(userId);
-    //   return user && user.role === "admin";
-    // }
+// async function isAdmin(userId) { // Tidak diperlukan lagi jika menggunakan middleware
+//   const user = await User.findById(userId);
+//   return user && user.role === "admin";
+// }
 
 // GET: List semua buletin
 export async function GET() {
-      // Contoh: Buletin bisa dilihat publik, tidak perlu autentikasi
-      // Jika perlu autentikasi, tambahkan:
-      // const authResult = await authenticateAndAuthorize(request, ['admin', 'guru', 'siswa', 'orangtua']);
-      // if (authResult.error) return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+  // Contoh: Buletin bisa dilihat publik, tidak perlu autentikasi
+  // Jika perlu autentikasi, tambahkan:
+  // const authResult = await authenticateAndAuthorize(request, ['admin', 'guru', 'siswa', 'orangtua']);
+  // if (authResult.error) return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   await dbConnect();
   const buletins = await Buletin.find().populate("author", "nama email").sort({ tanggal: -1 });
   return NextResponse.json(buletins);
@@ -87,7 +85,7 @@ export async function POST(request) {
     // Audit log
     await logCRUDAction(currentUser.id, 'CREATE_BULETIN', 'BULETIN', buletin._id, { judul, tanggal });
     // Notifikasi ke semua user
-    await NotificationService.createNotificationByRole(['admin','guru','siswa','orangtua'], {
+    await NotificationService.createNotificationByRole(['admin', 'guru', 'siswa', 'orangtua'], {
       title: 'Buletin Baru',
       message: `Buletin baru: ${judul}`,
       type: 'buletin',
@@ -106,58 +104,58 @@ export async function POST(request) {
 }
 
 // PUT: Edit buletin (admin only)
-    export async function PUT(request) {
-      try {
-        const authResult = await authenticateAndAuthorize(request, ['admin']);
-        if (authResult.error) {
-          return NextResponse.json({ error: authResult.error }, { status: authResult.status });
-        }
-        const currentUser = authResult.user;
-        await dbConnect();
-        const body = await request.json();
-        const { id, judul, isi, tanggal } = body;
-        if (!id || !judul || !isi ) {
-          return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });
-        }
-        const buletin = await Buletin.findByIdAndUpdate(id, { judul, isi, tanggal }, { new: true });
-        if (!buletin) {
-          return NextResponse.json({ error: "Buletin tidak ditemukan" }, { status: 404 });
-        }
-        // Audit log
-        await logCRUDAction(currentUser.id, 'UPDATE_BULETIN', 'BULETIN', buletin._id, { judul, tanggal });
-        // Notifikasi ke semua user
-        await NotificationService.createNotificationByRole(['admin','guru','siswa','orangtua'], {
-          title: 'Buletin Diperbarui',
-          message: `Buletin diperbarui: ${judul}`,
-          type: 'buletin',
-          data: { buletin_id: buletin._id, judul }
-        });
-        // Emit socket event aktivitas
-        if (getIO && typeof getIO === 'function') {
-          const io = getIO();
-          if (io) io.emit('activity:new', { type: 'buletin', action: 'update', buletin });
-        }
-        return NextResponse.json(buletin);
-      } catch (error) {
-        console.error("Error updating buletin:", error);
-        return NextResponse.json({ error: error.message || "Gagal mengupdate buletin" }, { status: 500 });
+export async function PUT(request) {
+  try {
+    const authResult = await authenticateAndAuthorize(request, ['admin']);
+    if (authResult.error) {
+      return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+    const currentUser = authResult.user;
+    await dbConnect();
+    const body = await request.json();
+    const { id, judul, isi, tanggal } = body;
+    if (!id || !judul || !isi) {
+      return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 });
+    }
+    const buletin = await Buletin.findByIdAndUpdate(id, { judul, isi, tanggal }, { new: true });
+    if (!buletin) {
+      return NextResponse.json({ error: "Buletin tidak ditemukan" }, { status: 404 });
+    }
+    // Audit log
+    await logCRUDAction(currentUser.id, 'UPDATE_BULETIN', 'BULETIN', buletin._id, { judul, tanggal });
+    // Notifikasi ke semua user
+    await NotificationService.createNotificationByRole(['admin', 'guru', 'siswa', 'orangtua'], {
+      title: 'Buletin Diperbarui',
+      message: `Buletin diperbarui: ${judul}`,
+      type: 'buletin',
+      data: { buletin_id: buletin._id, judul }
+    });
+    // Emit socket event aktivitas
+    if (getIO && typeof getIO === 'function') {
+      const io = getIO();
+      if (io) io.emit('activity:new', { type: 'buletin', action: 'update', buletin });
+    }
+    return NextResponse.json(buletin);
+  } catch (error) {
+    console.error("Error updating buletin:", error);
+    return NextResponse.json({ error: error.message || "Gagal mengupdate buletin" }, { status: 500 });
   }
 }
 
 // DELETE: Hapus buletin (admin only)
-    export async function DELETE(request) {
-      const authResult = await authenticateAndAuthorize(request, ['admin']);
-      if (authResult.error) {
-        return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+export async function DELETE(request) {
+  const authResult = await authenticateAndAuthorize(request, ['admin']);
+  if (authResult.error) {
+    return NextResponse.json({ error: authResult.error }, { status: authResult.status });
   }
-      const currentUser = authResult.user;
-    
-      await dbConnect();
-      const { id } = await request.json();
-      if (!id) {
-        return NextResponse.json({ error: "ID buletin diperlukan" }, { status: 400 });
-      }
-    
+  const currentUser = authResult.user;
+
+  await dbConnect();
+  const { id } = await request.json();
+  if (!id) {
+    return NextResponse.json({ error: "ID buletin diperlukan" }, { status: 400 });
+  }
+
   const buletin = await Buletin.findByIdAndDelete(id);
   if (!buletin) {
     return NextResponse.json({ error: "Buletin tidak ditemukan" }, { status: 404 });
@@ -165,7 +163,7 @@ export async function POST(request) {
   // Audit log
   await logCRUDAction(currentUser.id, 'DELETE_BULETIN', 'BULETIN', id, { judul: buletin.judul });
   // Notifikasi ke semua user
-  await NotificationService.createNotificationByRole(['admin','guru','siswa','orangtua'], {
+  await NotificationService.createNotificationByRole(['admin', 'guru', 'siswa', 'orangtua'], {
     title: 'Buletin Dihapus',
     message: `Buletin dihapus: ${buletin.judul}`,
     type: 'buletin',

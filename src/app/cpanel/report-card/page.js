@@ -2,17 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
-import { useSession } from "next-auth/react";
+// import { useSession } from "next-auth/react"; // Removed
 import { SEMESTERS } from "@/lib/constants";
 
 export default function ReportCardPage() {
-    const sessionObj = useSession();
-    const session = sessionObj?.data;
+    // const sessionObj = useSession();
+    // const session = sessionObj?.data;
+    const [currentUser, setCurrentUser] = useState(null);
     const [grades, setGrades] = useState([]);
     const [academicYears, setAcademicYears] = useState([]);
     const [selectedYear, setSelectedYear] = useState("");
     const [selectedSemester, setSelectedSemester] = useState(SEMESTERS.GANJIL);
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const stored = localStorage.getItem('user');
+        if (stored) setCurrentUser(JSON.parse(stored));
+    }, []);
 
     useEffect(() => {
         fetchDropdowns();
@@ -48,7 +54,8 @@ export default function ReportCardPage() {
     const fetchGrades = async () => {
         setLoading(true);
         try {
-            const studentId = session?.user?.id;
+            const studentId = currentUser?.id || currentUser?._id;
+            if (!studentId) return;
             const res = await fetchWithAuth(`/api/reports/student?academic_year_id=${selectedYear}&semester=${selectedSemester}`);
             if (res.ok) {
                 const data = await res.json();

@@ -4,6 +4,7 @@ import Submission from '@/lib/models/Submission';
 import Tugas from '@/lib/models/Tugas';
 import User from '@/lib/models/userModel';
 import Kelas from '@/lib/models/Kelas';
+import Orangtua from '@/lib/models/Orangtua';
 import { authenticateAndAuthorize } from '@/lib/authMiddleware';
 
 export async function GET(request) {
@@ -38,6 +39,15 @@ export async function GET(request) {
       const tugasGuru = await Tugas.find({ kelas_id: { $in: kelasIds } }).select('_id');
       const tugasIds = tugasGuru.map(t => t._id);
       match.tugas_id = { $in: tugasIds };
+    }
+    // Orangtua: only their children's data
+    if (user.role === 'orangtua') {
+      const orangtuaEntries = await Orangtua.find({ user_id: user.id });
+      const childIds = orangtuaEntries.map(o => o.siswa_id).filter(Boolean);
+      if (childIds.length === 0) {
+        return NextResponse.json([]);
+      }
+      match.siswa_id = { $in: childIds };
     }
     // Aggregate nilai per siswa per tugas
     const pipeline = [

@@ -3,6 +3,7 @@ import connectDB from '@/lib/db';
 import Kehadiran from '@/lib/models/Kehadiran';
 import User from '@/lib/models/userModel';
 import Kelas from '@/lib/models/Kelas';
+import Orangtua from '@/lib/models/Orangtua';
 import { authenticateAndAuthorize } from '@/lib/authMiddleware';
 
 export async function GET(request) {
@@ -34,6 +35,15 @@ export async function GET(request) {
       const kelasDiajar = await Kelas.find({ guru_id: user.id }).select('_id');
       const kelasIds = kelasDiajar.map(k => k._id);
       match.kelas_id = { $in: kelasIds };
+    }
+    // Orangtua: only their children's data
+    if (user.role === 'orangtua') {
+      const orangtuaEntries = await Orangtua.find({ user_id: user.id });
+      const childIds = orangtuaEntries.map(o => o.siswa_id).filter(Boolean);
+      if (childIds.length === 0) {
+        return NextResponse.json([]);
+      }
+      match.siswa_id = { $in: childIds };
     }
     // Aggregate kehadiran per siswa per kelas
     const pipeline = [

@@ -28,7 +28,7 @@ const formatActivityMessage = (type, data) => {
 
         // Orangtua activities
         child_grade: `📊 ${data.child_nama} mendapat nilai ${data.nilai} di ${data.tugas_judul}`,
-        child_attendance: `${data.status === 'Hadir' ? '✅' : '❌'} ${data.child_nama} ${data.status.toLowerCase()} di ${data.mapel_nama}`,
+        child_attendance: `${data.status === 'Hadir' ? '✅' : '❌'} ${data.child_nama} ${(data.status || 'tidak hadir').toLowerCase()} di ${data.mapel_nama || 'Pelajaran'}`,
     };
     return messages[type] || data.message || 'Aktivitas terbaru';
 };

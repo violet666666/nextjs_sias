@@ -1,14 +1,19 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { useSession } from "next-auth/react";
+// import { useSession } from "next-auth/react"; // Removed
 import { fetchWithAuth } from "@/lib/fetchWithAuth";
 import { toast } from "react-hot-toast";
 import { useParams, useRouter } from "next/navigation";
 
 export default function GradeInputPage({ params }) {
-    const sessionObj = useSession();
-    const session = sessionObj?.data;
+    // const sessionObj = useSession();
+    // const session = sessionObj?.data;
+    const [currentUser, setCurrentUser] = useState(null);
+    useEffect(() => {
+        const stored = localStorage.getItem('user');
+        if (stored) setCurrentUser(JSON.parse(stored));
+    }, []);
     const router = useRouter();
     const { examId } = params;
 

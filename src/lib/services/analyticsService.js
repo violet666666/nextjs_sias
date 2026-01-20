@@ -520,17 +520,20 @@ class AnalyticsService {
   // Parent-specific methods
   static async getChildrenCount(orangtuaId) {
     const Orangtua = mongoose.model('Orangtua');
-    const orangtua = await Orangtua.findOne({ user_id: orangtuaId });
-    return orangtua ? orangtua.siswa_ids.length : 0;
+    // Orangtua model has siswa_id (singular), one entry per child
+    const orangtuaEntries = await Orangtua.find({ user_id: orangtuaId });
+    return orangtuaEntries.length;
   }
 
   static async getChildrenPerformance(orangtuaId) {
     const Orangtua = mongoose.model('Orangtua');
-    const orangtua = await Orangtua.findOne({ user_id: orangtuaId });
+    // Get all child entries for this parent
+    const orangtuaEntries = await Orangtua.find({ user_id: orangtuaId });
+    const siswaIds = orangtuaEntries.map(o => o.siswa_id).filter(Boolean);
 
-    if (!orangtua) return [];
+    if (siswaIds.length === 0) return [];
 
-    const performance = await Promise.all(orangtua.siswa_ids.map(async (siswaId) => {
+    const performance = await Promise.all(siswaIds.map(async (siswaId) => {
       const siswa = await User.findById(siswaId).select('nama');
       const grades = await Submission.find({ siswa_id: siswaId });
 
@@ -550,13 +553,14 @@ class AnalyticsService {
 
   static async getChildrenAttendance(orangtuaId) {
     const Orangtua = mongoose.model('Orangtua');
-    const orangtua = await Orangtua.findOne({ user_id: orangtuaId });
+    const orangtuaEntries = await Orangtua.find({ user_id: orangtuaId });
+    const siswaIds = orangtuaEntries.map(o => o.siswa_id).filter(Boolean);
 
-    if (!orangtua || !orangtua.siswa_ids || orangtua.siswa_ids.length === 0) return 0;
+    if (siswaIds.length === 0) return 0;
 
-    const totalRecords = await Kehadiran.countDocuments({ siswa_id: { $in: orangtua.siswa_ids } });
+    const totalRecords = await Kehadiran.countDocuments({ siswa_id: { $in: siswaIds } });
     const presentRecords = await Kehadiran.countDocuments({
-      siswa_id: { $in: orangtua.siswa_ids },
+      siswa_id: { $in: siswaIds },
       status: 'Hadir'
     });
 
@@ -565,12 +569,13 @@ class AnalyticsService {
 
   static async getRecentUpdates(orangtuaId, limit = 5) {
     const Orangtua = mongoose.model('Orangtua');
-    const orangtua = await Orangtua.findOne({ user_id: orangtuaId });
+    const orangtuaEntries = await Orangtua.find({ user_id: orangtuaId });
+    const siswaIds = orangtuaEntries.map(o => o.siswa_id).filter(Boolean);
 
-    if (!orangtua || !orangtua.siswa_ids || orangtua.siswa_ids.length === 0) return [];
+    if (siswaIds.length === 0) return [];
 
     // Get recent grades for children
-    const recentGrades = await Submission.find({ siswa_id: { $in: orangtua.siswa_ids } })
+    const recentGrades = await Submission.find({ siswa_id: { $in: siswaIds } })
       .sort({ updatedAt: -1 })
       .limit(limit)
       .populate('siswa_id', 'nama')
