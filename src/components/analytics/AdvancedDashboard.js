@@ -45,7 +45,7 @@ const COLORS = [
 ];
 
 // Metric Card Component
-const MetricCard = ({ title, value, change, icon: Icon, color = 'blue', trend = 'up' }) => {
+const MetricCard = ({ title, value, icon: Icon, color = 'blue' }) => {
   const getColorClasses = (color) => {
     const colors = {
       blue: 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400',
@@ -64,18 +64,6 @@ const MetricCard = ({ title, value, change, icon: Icon, color = 'blue', trend = 
         <div>
           <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
           <p className="text-2xl font-bold text-gray-900 dark:text-gray-100 mt-1">{value}</p>
-          {change && (
-            <div className="flex items-center mt-2">
-              {trend === 'up' ? (
-                <TrendingUp className="w-4 h-4 text-green-500 mr-1" />
-              ) : (
-                <TrendingDown className="w-4 h-4 text-red-500 mr-1" />
-              )}
-              <span className={`text-sm ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                {change}% from last month
-              </span>
-            </div>
-          )}
         </div>
         <div className={`p-3 rounded-full ${getColorClasses(color)}`}>
           <Icon className="w-6 h-6" />
@@ -122,34 +110,26 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
         <MetricCard
           title="Total Siswa"
           value={dashboardData.totalStudents || 0}
-          change={5}
           icon={Users}
           color="blue"
-          trend="up"
         />
         <MetricCard
           title="Kelas Aktif"
           value={dashboardData.activeClasses || 0}
-          change={-2}
           icon={BookOpen}
           color="green"
-          trend="down"
         />
         <MetricCard
           title="Tingkat Penyelesaian"
           value={`${dashboardData.completionRate || 0}%`}
-          change={8}
           icon={CheckCircle}
           color="purple"
-          trend="up"
         />
         <MetricCard
           title="Rata-rata Nilai"
           value={`${dashboardData.averageGrade || 0}%`}
-          change={3}
           icon={Award}
           color="yellow"
-          trend="up"
         />
       </div>
 

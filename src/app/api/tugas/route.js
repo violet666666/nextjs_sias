@@ -80,8 +80,9 @@ export async function POST(request) {
     if (currentUser.role === 'guru') {
       tugasData.guru_id = currentUser.id;
     }
-    if (currentUser.role === 'admin' && body.guru_id) {
-      tugasData.guru_id = body.guru_id;
+    // For admin: use provided guru_id or fallback to admin's own ID (required field)
+    if (currentUser.role === 'admin') {
+      tugasData.guru_id = body.guru_id || currentUser.id;
     }
     const tugas = await Tugas.create(tugasData);
     // Audit log

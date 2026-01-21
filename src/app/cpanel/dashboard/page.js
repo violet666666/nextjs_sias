@@ -45,7 +45,7 @@ const ROLE_LABELS = {
   orangtua: "Orang Tua",
 };
 
-const DashboardCard = ({ title, value, icon: Icon, color = 'blue', change = null, onClick = null }) => (
+const DashboardCard = ({ title, value, icon: Icon, color = 'blue', onClick = null }) => (
   <div
     className={`bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-200 ${onClick ? 'cursor-pointer' : ''}`}
     onClick={onClick}
@@ -54,11 +54,6 @@ const DashboardCard = ({ title, value, icon: Icon, color = 'blue', change = null
       <div>
         <p className="text-sm font-medium text-gray-600">{title}</p>
         <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-        {change && (
-          <p className={`text-sm mt-1 ${change > 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {change > 0 ? '+' : ''}{change}% from last month
-          </p>
-        )}
       </div>
       <div className={`p-3 rounded-full bg-${color}-100`}>
         <Icon className={`h-6 w-6 text-${color}-600`} />
@@ -326,21 +321,6 @@ export default function DashboardPage() {
             {/* Analytics Dashboard (Replaces manual stats) */}
             <div className="mb-8">
               <AdvancedDashboard user={user} role={user.role} />
-            </div>
-
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Quick Actions */}
-              <div className="lg:col-span-1">
-                <QuickActions user={user} role={user.role} />
-              </div>
-
-              {/* Activity Feed (Audit Log) - Admin Only */}
-              {user.role === 'admin' && (
-                <div className="lg:col-span-2">
-                  <ActivityFeed maxItems={10} />
-                </div>
-              )}
             </div>
           </div>
         )}

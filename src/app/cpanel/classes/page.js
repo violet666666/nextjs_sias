@@ -119,12 +119,88 @@ export default function ClassesPage() {
     }
   ];
 
+  const [editId, setEditId] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  const handleEdit = (item) => {
+    setEditId(item._id);
+    setForm({
+      nama_kelas: item.nama_kelas || '',
+      tahun_ajaran: item.tahun_ajaran || '',
+      status_kelas: item.status_kelas || 'aktif',
+      guru_id: item.guru_id?._id || item.guru_id || ''
+    });
+    setShowModal(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Yakin hapus kelas ini? Semua data terkait akan ikut terhapus.')) return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetchWithAuth(`/api/kelas/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setToast({ message: 'Kelas berhasil dihapus!', type: 'success' });
+        setClasses(classes.filter(c => c._id !== id));
+      } else {
+        const data = await res.json();
+        setToast({ message: data.error || 'Gagal menghapus kelas', type: 'error' });
+      }
+    } catch (err) {
+      setToast({ message: 'Terjadi kesalahan', type: 'error' });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleSubmitEdit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    let payload = { ...form };
+    if (user.role === "guru") {
+      payload.guru_id = user._id || user.id;
+    }
+
+    const method = editId ? 'PUT' : 'POST';
+    const url = editId ? `/api/kelas/${editId}` : '/api/kelas';
+
+    const res = await fetchWithAuth(url, {
+      method,
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      setToast({ message: editId ? "Kelas berhasil diupdate!" : "Kelas berhasil ditambahkan!", type: "success" });
+      setShowModal(false);
+      setEditId(null);
+      setForm({ nama_kelas: "", tahun_ajaran: "", status_kelas: "aktif", guru_id: "" });
+      // Refresh
+      const kelasRes = await fetchWithAuth("/api/kelas");
+      const kelasData = await kelasRes.json();
+      setClasses(Array.isArray(kelasData) ? kelasData : []);
+    } else {
+      const data = await res.json();
+      setToast({ message: data.error || "Gagal menyimpan kelas", type: "error" });
+    }
+    setSaving(false);
+  };
+
   const actions = [
     {
       label: 'Detail',
       icon: <span className="text-blue-500 font-medium text-sm">Detail</span>,
       onClick: (item) => window.location.href = `/cpanel/classes/${item._id}`
-    }
+    },
+    ...(user?.role === 'admin' ? [
+      {
+        label: 'Edit',
+        icon: <span className="text-yellow-600 font-medium text-sm">Edit</span>,
+        onClick: (item) => handleEdit(item)
+      },
+      {
+        label: 'Hapus',
+        icon: <span className="text-red-500 font-medium text-sm">Hapus</span>,
+        onClick: (item) => handleDelete(item._id)
+      }
+    ] : [])
   ];
 
   return (
