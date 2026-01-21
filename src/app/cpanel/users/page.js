@@ -12,6 +12,7 @@ const initialForm = {
   email: '',
   password: '',
   role: 'siswa',
+  nisn: '',
 };
 
 export default function UsersPage() {
@@ -55,6 +56,7 @@ export default function UsersPage() {
         email: user.email || '',
         password: '',
         role: user.role || 'siswa',
+        nisn: user.nisn || '',
       });
       setEditId(user._id);
     } else {
@@ -145,20 +147,20 @@ export default function UsersPage() {
           <h1 className="text-3xl font-bold">Manajemen User</h1>
           <Button onClick={() => openModal()} color="primary">Tambah User</Button>
         </div>
-        
+
         {/* Filters */}
         <div className="mb-4">
-            <select
-              className="border rounded px-3 py-2"
-              value={filterRole}
-              onChange={e => setFilterRole(e.target.value)}
-            >
-              <option value="">Semua Role</option>
-              <option value="admin">Admin</option>
-              <option value="guru">Guru</option>
-              <option value="siswa">Siswa</option>
-              <option value="orangtua">Orangtua</option>
-            </select>
+          <select
+            className="border rounded px-3 py-2"
+            value={filterRole}
+            onChange={e => setFilterRole(e.target.value)}
+          >
+            <option value="">Semua Role</option>
+            <option value="admin">Admin</option>
+            <option value="guru">Guru</option>
+            <option value="siswa">Siswa</option>
+            <option value="orangtua">Orangtua</option>
+          </select>
         </div>
 
         {error && <div className="text-red-500 mb-4">{error}</div>}
@@ -207,6 +209,14 @@ export default function UsersPage() {
                   <option value="orangtua">Orangtua</option>
                 </select>
               </div>
+              {form.role === 'siswa' && (
+                <Input
+                  label="NISN"
+                  value={form.nisn}
+                  onChange={e => setForm(f => ({ ...f, nisn: e.target.value }))}
+                  placeholder="Nomor Induk Siswa Nasional"
+                />
+              )}
               {error && <div className="text-red-500">{error}</div>}
               <div className="flex justify-end gap-2">
                 <Button type="button" onClick={() => setModalOpen(false)} variant="outline">Batal</Button>

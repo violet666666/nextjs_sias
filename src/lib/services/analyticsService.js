@@ -28,13 +28,16 @@ class AnalyticsService {
     // Role-specific stats
     if (role === 'admin') {
       const gradeStats = await this.getGradeStats();
+      const usersByRole = await this.getUsersByRole();
 
       return {
         ...baseStats,
+        totalStudents: usersByRole.siswa || 0,
+        totalTeachers: usersByRole.guru || 0,
         activeClasses: await Kelas.countDocuments({ status_kelas: 'aktif' }),
         completionRate: await this.getCompletionRate(),
         averageGrade: gradeStats.average ? Math.round(gradeStats.average) : 0,
-        usersByRole: await this.getUsersByRole(),
+        usersByRole: usersByRole,
         classesByStatus: await this.getClassesByStatus(),
         assignmentsByStatus: await this.getAssignmentsByStatus(),
         attendanceStats: await this.getAttendanceStats(),

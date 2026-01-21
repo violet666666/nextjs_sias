@@ -67,6 +67,15 @@ export default function TaskManagementPage() {
     feedback: ""
   });
 
+  // Pagination for submissions
+  const [submissionPage, setSubmissionPage] = useState(1);
+  const submissionsPerPage = 10;
+  const totalSubmissionPages = Math.ceil(submissions.length / submissionsPerPage);
+  const paginatedSubmissions = submissions.slice(
+    (submissionPage - 1) * submissionsPerPage,
+    submissionPage * submissionsPerPage
+  );
+
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -323,42 +332,66 @@ export default function TaskManagementPage() {
 
             {/* Submissions List */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="text-lg font-semibold">Pengumpulan Tugas</h2>
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h2 className="text-lg font-semibold">Pengumpulan Tugas ({submissions.length} total)</h2>
               </div>
               <div className="p-4">
                 {submissions.length === 0 ? (
                   <p className="text-gray-500 text-center py-4">Belum ada pengumpulan</p>
                 ) : (
-                  <ResponsiveTable>
-                    <thead>
-                      <tr>
-                        <th className="px-4 py-2">Siswa</th>
-                        <th className="px-4 py-2">Tugas</th>
-                        <th className="px-4 py-2">Nilai</th>
-                        <th className="px-4 py-2">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {submissions.map((submission) => (
-                        <tr key={submission._id}>
-                          <td className="px-4 py-2">{submission.siswa_id?.nama || 'Unknown Student'}</td>
-                          <td className="px-4 py-2">{submission.tugas_id?.judul || 'Unknown Task'}</td>
-                          <td className="px-4 py-2">{submission.nilai || '-'}</td>
-                          <td className="px-4 py-2">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => openGradeModal(submission)}
-                              icon={<Edit className="w-4 h-4" />}
-                            >
-                              {submission.nilai ? 'Edit Nilai' : 'Nilai'}
-                            </Button>
-                          </td>
+                  <>
+                    <ResponsiveTable>
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-2">Siswa</th>
+                          <th className="px-4 py-2">Tugas</th>
+                          <th className="px-4 py-2">Nilai</th>
+                          <th className="px-4 py-2">Aksi</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </ResponsiveTable>
+                      </thead>
+                      <tbody>
+                        {paginatedSubmissions.map((submission) => (
+                          <tr key={submission._id}>
+                            <td className="px-4 py-2">{submission.siswa_id?.nama || 'Unknown Student'}</td>
+                            <td className="px-4 py-2">{submission.tugas_id?.judul || 'Unknown Task'}</td>
+                            <td className="px-4 py-2">{submission.nilai || '-'}</td>
+                            <td className="px-4 py-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openGradeModal(submission)}
+                                icon={<Edit className="w-4 h-4" />}
+                              >
+                                {submission.nilai ? 'Edit Nilai' : 'Nilai'}
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </ResponsiveTable>
+                    {/* Pagination Controls */}
+                    {totalSubmissionPages > 1 && (
+                      <div className="flex justify-center items-center gap-4 mt-4">
+                        <button
+                          onClick={() => setSubmissionPage(p => Math.max(1, p - 1))}
+                          disabled={submissionPage === 1}
+                          className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 disabled:opacity-50"
+                        >
+                          ← Prev
+                        </button>
+                        <span className="text-sm text-gray-600 dark:text-gray-400">
+                          Halaman {submissionPage} dari {totalSubmissionPages}
+                        </span>
+                        <button
+                          onClick={() => setSubmissionPage(p => Math.min(totalSubmissionPages, p + 1))}
+                          disabled={submissionPage === totalSubmissionPages}
+                          className="px-3 py-1 rounded bg-gray-200 dark:bg-gray-700 disabled:opacity-50"
+                        >
+                          Next →
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
