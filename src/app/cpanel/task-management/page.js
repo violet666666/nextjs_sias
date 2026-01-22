@@ -69,9 +69,21 @@ export default function TaskManagementPage() {
 
   // Pagination for submissions
   const [submissionPage, setSubmissionPage] = useState(1);
+  const [filterUnchecked, setFilterUnchecked] = useState(false); // New filter state
   const submissionsPerPage = 10;
-  const totalSubmissionPages = Math.ceil(submissions.length / submissionsPerPage);
-  const paginatedSubmissions = submissions.slice(
+
+  // Filter and Sort Submissions
+  const filteredSubmissions = submissions
+    .filter(s => !filterUnchecked || !s.nilai) // Filter unchecked if enabled
+    .sort((a, b) => {
+      // Sort by newest first (createdAt or tanggal_kumpul)
+      const dateA = new Date(a.tanggal_kumpul || a.createdAt);
+      const dateB = new Date(b.tanggal_kumpul || b.createdAt);
+      return dateB - dateA;
+    });
+
+  const totalSubmissionPages = Math.ceil(filteredSubmissions.length / submissionsPerPage);
+  const paginatedSubmissions = filteredSubmissions.slice(
     (submissionPage - 1) * submissionsPerPage,
     submissionPage * submissionsPerPage
   );
@@ -333,11 +345,33 @@ export default function TaskManagementPage() {
             {/* Submissions List */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                <h2 className="text-lg font-semibold">Pengumpulan Tugas ({submissions.length} total)</h2>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  Pengumpulan Tugas
+                  <span className="text-sm font-normal text-gray-500">({filteredSubmissions.length})</span>
+                </h2>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="filterUnchecked"
+                    checked={filterUnchecked}
+                    onChange={(e) => {
+                      setFilterUnchecked(e.target.checked);
+                      setSubmissionPage(1); // Reset to first page when filtering
+                    }}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <label htmlFor="filterUnchecked" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                    Belum Dinilai
+                  </label>
+                </div>
               </div>
               <div className="p-4">
                 {submissions.length === 0 ? (
                   <p className="text-gray-500 text-center py-4">Belum ada pengumpulan</p>
+                ) : filteredSubmissions.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">
+                    {filterUnchecked ? "Semua tugas sudah dinilai" : "Tidak ada pengumpulan yang cocok"}
+                  </p>
                 ) : (
                   <>
                     <ResponsiveTable>
