@@ -39,7 +39,8 @@ export default function SiswaDashboardView({ user }) {
         const tugasObj = {};
         const absensiObj = {};
         for (const mapel of mapelArr) {
-          const tugasRes = await fetchWithAuth(`/api/tugas?mapel_id=${mapel._id}`);
+          // Include kelas_id to ensure proper filtering
+          const tugasRes = await fetchWithAuth(`/api/tugas?mapel_id=${mapel._id}&kelas_id=${kelasObj._id}`);
           tugasObj[mapel._id] = tugasRes.ok ? await tugasRes.json() : [];
           const absensiRes = await fetchWithAuth(`/api/kehadiran?mapel_id=${mapel._id}&siswa_id=${user.id}`);
           absensiObj[mapel._id] = absensiRes.ok ? await absensiRes.json() : [];

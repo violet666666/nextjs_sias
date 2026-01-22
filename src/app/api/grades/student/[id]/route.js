@@ -32,7 +32,14 @@ export async function GET(request, { params }) {
         // Jika user adalah admin, guru, atau orang tua yang sudah terverifikasi, lanjutkan proses
 
         const grades = await Submission.find({ siswa_id: id })
-            .populate({ path: 'tugas_id', select: 'judul kelas_id' })
+            .populate({
+                path: 'tugas_id',
+                select: 'judul kelas_id mapel_id',
+                populate: [
+                    { path: 'kelas_id', select: 'nama_kelas' },
+                    { path: 'mapel_id', select: 'nama_mapel nama' }
+                ]
+            })
             .populate({ path: 'siswa_id', select: 'nama' });
 
         return NextResponse.json(grades, { status: 200 });

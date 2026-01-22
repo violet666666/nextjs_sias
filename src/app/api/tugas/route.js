@@ -35,18 +35,18 @@ export async function GET(request) {
       }
       filter.kelas_id = { $in: kelasIds };
     } else if (currentUser.role === 'siswa') {
-      if (currentUser.kelas_id) {
+      // ALWAYS use Enrollment as primary source (consistent with getUpcomingDeadlines)
+      const Enrollment = (await import('@/lib/models/Enrollment')).default;
+      const enrollments = await Enrollment.find({ siswa_id: currentUser.id }).select('kelas_id');
+      const kelasIds = enrollments.map(e => e.kelas_id).filter(Boolean);
+
+      if (kelasIds.length > 0) {
+        filter.kelas_id = { $in: kelasIds };
+      } else if (currentUser.kelas_id) {
+        // Fallback: use user.kelas_id if no enrollment found
         filter.kelas_id = currentUser.kelas_id;
       } else {
-        // Fallback: check Enrollment for siswa's classes
-        const Enrollment = (await import('@/lib/models/Enrollment')).default;
-        const enrollments = await Enrollment.find({ siswa_id: currentUser.id }).select('kelas_id');
-        const kelasIds = enrollments.map(e => e.kelas_id).filter(Boolean);
-        if (kelasIds.length > 0) {
-          filter.kelas_id = { $in: kelasIds };
-        } else {
-          return NextResponse.json([]);
-        }
+        return NextResponse.json([]);
       }
     } else {
       if (kelas_id) filter.kelas_id = kelas_id;
