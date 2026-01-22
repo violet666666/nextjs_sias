@@ -6,7 +6,7 @@ import BulkAddStudentModal from './BulkAddStudentModal';
 import Toast from '../common/Toast';
 import { saveAs } from 'file-saver';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 import { Users, BookOpen, Award, AlertTriangle, ArrowLeft, Printer, Plus } from 'lucide-react';
 import Link from 'next/link';
 
@@ -76,7 +76,7 @@ export default function ClassDetailAdmin({ kelasId }) {
       return [idx + 1, s.nama, s.email || '-', avgN, hadir, alfa];
     });
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: 35,
       head: [['No', 'Nama Siswa', 'Email', 'Nilai Rata-rata', 'Hadir', 'Alfa']],
       body: tableData,
@@ -172,8 +172,8 @@ export default function ClassDetailAdmin({ kelasId }) {
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeTab === tab.key
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                 }`}
             >
               {tab.label}

@@ -77,7 +77,7 @@ export async function GET(request) {
       // Data kehadiran anak
       const anakKehadiran = kehadiran.filter(k => k.siswa_id.toString() === anakId);
       const totalAttendance = anakKehadiran.length;
-      const presentAttendance = anakKehadiran.filter(k => k.status === 'hadir').length;
+      const presentAttendance = anakKehadiran.filter(k => k.status?.toLowerCase() === 'hadir').length;
       const attendanceRate = totalAttendance > 0
         ? Math.round((presentAttendance / totalAttendance) * 100)
         : 0;

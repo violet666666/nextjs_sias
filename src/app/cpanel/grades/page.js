@@ -17,6 +17,15 @@ export default function GradesPage() {
   const [exportingExcel, setExportingExcel] = useState(false);
   const [toast, setToast] = useState({ message: "", type: "success" });
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+  const totalPages = Math.ceil(nilai.length / itemsPerPage);
+  const paginatedNilai = nilai.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   useEffect(() => {
     const stored = localStorage.getItem("user");
     if (!stored) {
@@ -167,7 +176,7 @@ export default function GradesPage() {
                       </td>
                     </tr>
                   ) : (
-                    nilai.map((n) => (
+                    paginatedNilai.map((n) => (
                       <tr key={n._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200">
                         {(user?.role === 'admin' || user?.role === 'guru') && (
                           <td className="px-6 py-4 whitespace-nowrap text-gray-900 dark:text-gray-100">
@@ -204,6 +213,28 @@ export default function GradesPage() {
                 </tbody>
               </table>
             </div>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-4 p-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  ← Prev
+                </button>
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Halaman {currentPage} dari {totalPages} ({nilai.length} total)
+                </span>
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>

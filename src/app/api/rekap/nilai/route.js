@@ -47,7 +47,13 @@ export async function GET(request) {
       if (childIds.length === 0) {
         return NextResponse.json([]);
       }
-      match.siswa_id = { $in: childIds };
+      // If a specific siswa_id is selected, use it if it's one of the children
+      // Otherwise, show all children
+      if (siswa_id && childIds.some(id => id.toString() === siswa_id)) {
+        match.siswa_id = siswa_id;
+      } else {
+        match.siswa_id = { $in: childIds };
+      }
     }
     // Aggregate nilai per siswa per tugas
     const pipeline = [

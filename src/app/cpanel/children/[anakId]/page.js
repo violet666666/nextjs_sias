@@ -45,13 +45,30 @@ export default function ParentChildDetailPage({ params }) {
       setLoading(true);
       setError('');
       try {
-        // Fetch data anak dan kelasnya
+        // Fetch data anak
         const anakRes = await fetchWithAuth(`/api/users/${anakId}`);
         if (!anakRes.ok) throw new Error('Gagal mengambil data anak');
         const anakData = await anakRes.json();
         setAnak(anakData);
-        // Fetch kelas anak
-        if (anakData.kelas_id) {
+
+        // Fetch kelas anak via enrollment API (more reliable than user.kelas_id)
+        const enrollRes = await fetchWithAuth(`/api/enrollments?siswa_id=${anakId}`);
+        if (enrollRes.ok) {
+          const enrollments = await enrollRes.json();
+          if (Array.isArray(enrollments) && enrollments.length > 0 && enrollments[0].kelas_id) {
+            // Use the first enrollment's kelas (most common case)
+            const kelasData = enrollments[0].kelas_id;
+            if (kelasData && typeof kelasData === 'object') {
+              setKelas(kelasData);
+            } else if (kelasData) {
+              // If only ID, fetch full kelas data
+              const kelasRes = await fetchWithAuth(`/api/kelas/${kelasData}`);
+              if (kelasRes.ok) setKelas(await kelasRes.json());
+            }
+          }
+        }
+        // Fallback: try user's kelas_id if enrollment didn't work
+        if (!kelas && anakData.kelas_id) {
           const kelasRes = await fetchWithAuth(`/api/kelas/${anakData.kelas_id}`);
           if (kelasRes.ok) setKelas(await kelasRes.json());
         }
@@ -66,18 +83,19 @@ export default function ParentChildDetailPage({ params }) {
   // Fetch mapel di kelas anak
   useEffect(() => {
     async function fetchMapel() {
-      if (!kelas?.matapelajaran_ids?.length) { setMapel([]); return; }
+      if (!kelas?._id) { setMapel([]); return; }
       setLoadingMapel(true); setErrorMapel('');
       try {
-        const res = await fetchWithAuth(`/api/subjects?ids=${kelas.matapelajaran_ids.join(',')}`);
+        // Fetch subjects by kelas_id instead of matapelajaran_ids
+        const res = await fetchWithAuth(`/api/subjects?kelas_id=${kelas._id}`);
         if (!res.ok) throw new Error('Gagal mengambil data mata pelajaran');
         const data = await res.json();
         setMapel(Array.isArray(data) ? data : []);
       } catch (err) { setErrorMapel(err.message); }
       setLoadingMapel(false);
     }
-    if (kelas?.matapelajaran_ids) fetchMapel();
-  }, [kelas?.matapelajaran_ids]);
+    if (kelas?._id) fetchMapel();
+  }, [kelas?._id]);
 
   // Fetch tugas anak
   useEffect(() => {
@@ -218,7 +236,7 @@ export default function ParentChildDetailPage({ params }) {
                 <tbody>
                   {mapel.map(m => (
                     <tr key={m._id}>
-                      <td className="py-2 px-4 font-medium">{m.nama}</td>
+                      <td className="py-2 px-4 font-medium">{m.nama_mapel || m.nama}</td>
                       <td className="py-2 px-4">
                         {Array.isArray(m.guru_ids) && m.guru_ids.length
                           ? m.guru_ids.map(g => g.nama || g).join(', ')
@@ -256,7 +274,7 @@ export default function ParentChildDetailPage({ params }) {
                   {tugas.map(t => (
                     <tr key={t._id}>
                       <td className="py-2 px-4 font-medium">{t.judul}</td>
-                      <td className="py-2 px-4">{t.matapelajaran_id?.nama || '-'}</td>
+                      <td className="py-2 px-4">{t.mapel_id?.nama_mapel || t.mapel_id?.nama || t.matapelajaran_id?.nama_mapel || t.matapelajaran_id?.nama || '-'}</td>
                       <td className="py-2 px-4">{t.tanggal_deadline ? new Date(t.tanggal_deadline).toLocaleDateString() : '-'}</td>
                       <td className="py-2 px-4">{t.status || '-'}</td>
                     </tr>
@@ -290,7 +308,7 @@ export default function ParentChildDetailPage({ params }) {
                 <tbody>
                   {nilai.map((n, i) => (
                     <tr key={i}>
-                      <td className="py-2 px-4">{n.matapelajaran_id?.nama || '-'}</td>
+                      <td className="py-2 px-4">{n.tugas_id?.mapel_id?.nama_mapel || n.tugas_id?.mapel_id?.nama || n.matapelajaran_id?.nama_mapel || n.matapelajaran_id?.nama || '-'}</td>
                       <td className="py-2 px-4">{n.tugas_id?.judul || '-'}</td>
                       <td className="py-2 px-4 font-medium">{n.nilai ?? '-'}</td>
                       <td className="py-2 px-4">{n.feedback ?? '-'}</td>

@@ -97,8 +97,12 @@ export default function GuruAttendanceView({ user, setToast }) {
         return;
       }
       try {
-        // Ambil daftar mapel di kelas yang diajar guru
-        const res = await fetchWithAuth(`/api/subjects?kelas_id=${startSessionForm.kelas_id}&guru_id=${user.id}`);
+        // Ambil daftar mapel di kelas yang diajar guru (admin sees all)
+        let url = `/api/subjects?kelas_id=${startSessionForm.kelas_id}`;
+        if (user.role !== 'admin') {
+          url += `&guru_id=${user.id}`;
+        }
+        const res = await fetchWithAuth(url);
         if (!res.ok) throw new Error("Gagal mengambil data mapel");
         const data = await res.json();
         setMapelList(Array.isArray(data) ? data : []);

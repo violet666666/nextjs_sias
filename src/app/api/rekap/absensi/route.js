@@ -24,7 +24,12 @@ export async function GET(request) {
     if (tanggal_start || tanggal_end) {
       match.tanggal = {};
       if (tanggal_start) match.tanggal.$gte = new Date(tanggal_start);
-      if (tanggal_end) match.tanggal.$lte = new Date(tanggal_end);
+      if (tanggal_end) {
+        // Set end date to end of day (23:59:59.999) to include all records on that day
+        const endDate = new Date(tanggal_end);
+        endDate.setHours(23, 59, 59, 999);
+        match.tanggal.$lte = endDate;
+      }
     }
     // Role-based filter
     const user = authResult.user;
@@ -43,7 +48,13 @@ export async function GET(request) {
       if (childIds.length === 0) {
         return NextResponse.json([]);
       }
-      match.siswa_id = { $in: childIds };
+      // If a specific siswa_id is selected, use it if it's one of the children
+      // Otherwise, show all children
+      if (siswa_id && childIds.some(id => id.toString() === siswa_id)) {
+        match.siswa_id = siswa_id;
+      } else {
+        match.siswa_id = { $in: childIds };
+      }
     }
     // Aggregate kehadiran per siswa per kelas
     const pipeline = [
