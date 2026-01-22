@@ -11,6 +11,10 @@ export default function SiswaAttendanceView({ user, setToast }) {
   const [myEnrollments, setMyEnrollments] = useState([]);
   const [loadingData, setLoadingData] = useState(true);
 
+  // Pagination state for attendance history
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
+
   const fetchSiswaData = useCallback(async () => {
     if (!user || user.role !== "siswa") return;
     setLoadingData(true);
@@ -24,19 +28,19 @@ export default function SiswaAttendanceView({ user, setToast }) {
       if (!activeSessionsRes.ok) throw new Error(`Gagal mengambil sesi aktif: ${activeSessionsRes.statusText}`);
       if (!myAttendancesRes.ok) throw new Error(`Gagal mengambil riwayat absensi: ${myAttendancesRes.statusText}`);
       if (!enrollmentsRes.ok) throw new Error(`Gagal mengambil data enrollment: ${enrollmentsRes.statusText}`);
-      
+
       const activeSessionsData = await activeSessionsRes.json();
       const myAttendancesData = await myAttendancesRes.json();
       const enrollmentsData = await enrollmentsRes.json();
-      
+
       setMyEnrollments(enrollmentsData);
       const enrolledKelasIds = enrollmentsData.map(e => e.kelas_id._id);
 
       // Filter sesi aktif berdasarkan kelas yang diikuti siswa
-      const filteredActiveSessions = activeSessionsData.filter(session => 
+      const filteredActiveSessions = activeSessionsData.filter(session =>
         enrolledKelasIds.includes(session.kelas_id._id)
       );
-      
+
       setActiveSessionsForSiswa(filteredActiveSessions);
       setMyAttendances(myAttendancesData);
 
@@ -117,8 +121,41 @@ export default function SiswaAttendanceView({ user, setToast }) {
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <ResponsiveTable>
             <thead className="bg-gray-50"><tr><th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">Kelas</th><th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">Tanggal</th><th className="px-6 py-3 text-left text-xs font-bold text-black uppercase tracking-wider">Status</th></tr></thead>
-            <tbody className="bg-white divide-y divide-gray-200">{myAttendances.map(att => (<tr key={att._id}><td className="px-6 py-4 whitespace-nowrap text-black">{att.kelas_id?.nama_kelas || "N/A"}</td><td className="px-6 py-4 whitespace-nowrap text-black">{new Date(att.tanggal).toLocaleString()}</td><td className="px-6 py-4 whitespace-nowrap text-black">{att.status}</td></tr>))}</tbody>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {myAttendances
+                .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+                .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+                .map(att => (
+                  <tr key={att._id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-black">{att.kelas_id?.nama_kelas || "N/A"}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-black">{new Date(att.tanggal).toLocaleString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-black">{att.status}</td>
+                  </tr>
+                ))}
+            </tbody>
           </ResponsiveTable>
+          {/* Pagination Controls */}
+          {Math.ceil(myAttendances.length / itemsPerPage) > 1 && (
+            <div className="flex justify-center items-center gap-4 p-4 bg-gray-50 border-t">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-4 py-2 rounded-lg bg-white border border-gray-300 disabled:opacity-50 hover:bg-gray-100 transition-colors"
+              >
+                ← Prev
+              </button>
+              <span className="text-sm text-gray-600">
+                Halaman {currentPage} dari {Math.ceil(myAttendances.length / itemsPerPage)} ({myAttendances.length} total)
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(Math.ceil(myAttendances.length / itemsPerPage), p + 1))}
+                disabled={currentPage === Math.ceil(myAttendances.length / itemsPerPage)}
+                className="px-4 py-2 rounded-lg bg-white border border-gray-300 disabled:opacity-50 hover:bg-gray-100 transition-colors"
+              >
+                Next →
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

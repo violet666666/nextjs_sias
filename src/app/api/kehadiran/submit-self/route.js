@@ -53,6 +53,7 @@ export async function POST(request) {
     // 4. Buat record kehadiran
     const kehadiranRecord = await Kehadiran.create({
       kelas_id: activeSession.kelas_id,
+      mapel_id: activeSession.mapel_id, // Include mapel_id from session
       siswa_id: currentUser.id,
       session_id: activeSession._id, // Simpan ID sesi
       tanggal: now,
