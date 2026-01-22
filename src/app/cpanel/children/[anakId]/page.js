@@ -45,33 +45,40 @@ export default function ParentChildDetailPage({ params }) {
       setLoading(true);
       setError('');
       try {
-        // Fetch data anak
-        const anakRes = await fetchWithAuth(`/api/users/${anakId}`);
+        // Parallel fetch for Anak and Enrollment to avoid waterfall
+        const [anakRes, enrollRes] = await Promise.all([
+          fetchWithAuth(`/api/users/${anakId}`),
+          fetchWithAuth(`/api/enrollments?siswa_id=${anakId}`)
+        ]);
+
         if (!anakRes.ok) throw new Error('Gagal mengambil data anak');
         const anakData = await anakRes.json();
         setAnak(anakData);
 
-        // Fetch kelas anak via enrollment API (more reliable than user.kelas_id)
-        const enrollRes = await fetchWithAuth(`/api/enrollments?siswa_id=${anakId}`);
+        let kelasFound = null;
+
+        // Process Enrollment
         if (enrollRes.ok) {
           const enrollments = await enrollRes.json();
           if (Array.isArray(enrollments) && enrollments.length > 0 && enrollments[0].kelas_id) {
-            // Use the first enrollment's kelas (most common case)
             const kelasData = enrollments[0].kelas_id;
             if (kelasData && typeof kelasData === 'object') {
-              setKelas(kelasData);
+              kelasFound = kelasData;
             } else if (kelasData) {
-              // If only ID, fetch full kelas data
               const kelasRes = await fetchWithAuth(`/api/kelas/${kelasData}`);
-              if (kelasRes.ok) setKelas(await kelasRes.json());
+              if (kelasRes.ok) kelasFound = await kelasRes.json();
             }
           }
         }
-        // Fallback: try user's kelas_id if enrollment didn't work
-        if (!kelas && anakData.kelas_id) {
+
+        // Fallback: use user's kelas_id
+        if (!kelasFound && anakData.kelas_id) {
           const kelasRes = await fetchWithAuth(`/api/kelas/${anakData.kelas_id}`);
-          if (kelasRes.ok) setKelas(await kelasRes.json());
+          if (kelasRes.ok) kelasFound = await kelasRes.json();
         }
+
+        if (kelasFound) setKelas(kelasFound);
+
       } catch (err) {
         setError(err.message);
       }
@@ -176,7 +183,29 @@ export default function ParentChildDetailPage({ params }) {
     if (kelas?._id) fetchKomentar();
   }, [kelas?._id]);
 
-  if (loading) return <div className="p-8 text-center">Memuat data anak...</div>;
+  if (loading) return (
+    <div className="max-w-5xl mx-auto p-4 animate-pulse">
+      {/* Skeleton Header */}
+      <div className="rounded-2xl bg-gray-200 dark:bg-gray-700 h-40 mb-8 p-6 flex flex-col md:flex-row items-center justify-between">
+        <div className="space-y-4 w-full">
+          <div className="h-8 bg-gray-300 dark:bg-gray-600 rounded w-1/3"></div>
+          <div className="flex gap-4">
+            <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
+            <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
+            <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-24"></div>
+          </div>
+        </div>
+      </div>
+      {/* Skeleton Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-gray-200 dark:border-slate-700">
+        {[1, 2, 3, 4, 5, 6, 7].map(i => (
+          <div key={i} className="h-10 bg-gray-200 dark:bg-gray-700 rounded-t-lg w-20"></div>
+        ))}
+      </div>
+      {/* Skeleton Content */}
+      <div className="h-64 bg-gray-100 dark:bg-gray-800 rounded-lg"></div>
+    </div>
+  );
   if (error) return <div className="p-8 text-center text-red-500">{error}</div>;
   if (!anak) return <div className="p-8 text-center text-gray-500">Data anak tidak ditemukan.</div>;
 

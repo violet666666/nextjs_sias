@@ -7,7 +7,7 @@ import { logCRUDAction } from '@/lib/auditLogger';
 
 export async function GET(request) {
   try {
-    const authResult = await authenticateAndAuthorize(request, ['admin', 'guru', 'siswa']);
+    const authResult = await authenticateAndAuthorize(request, ['admin', 'guru', 'siswa', 'orangtua']);
     if (authResult.error) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }

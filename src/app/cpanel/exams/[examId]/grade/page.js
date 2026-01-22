@@ -7,6 +7,8 @@ import { toast } from "react-hot-toast";
 import { useParams, useRouter } from "next/navigation";
 
 export default function GradeInputPage({ params }) {
+    // Next.js 15+: params is a Promise, use React.use() to unwrap
+    const { examId } = use(params);
     // const sessionObj = useSession();
     // const session = sessionObj?.data;
     const [currentUser, setCurrentUser] = useState(null);
@@ -15,7 +17,6 @@ export default function GradeInputPage({ params }) {
         if (stored) setCurrentUser(JSON.parse(stored));
     }, []);
     const router = useRouter();
-    const { examId } = params;
 
     const [exam, setExam] = useState(null);
     const [students, setStudents] = useState([]);

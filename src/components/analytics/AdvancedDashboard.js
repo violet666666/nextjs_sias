@@ -533,10 +533,10 @@ export const AdvancedDashboard = ({ user, role, onError }) => {
             onChange={(e) => setTimeRange(e.target.value)}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="week">Last Week</option>
-            <option value="month">Last Month</option>
-            <option value="quarter">Last Quarter</option>
-            <option value="year">Last Year</option>
+            <option value="week">Minggu Ini</option>
+            <option value="month">Bulan Ini</option>
+            <option value="quarter">Kuartal Ini</option>
+            <option value="year">Tahun Ini</option>
           </select>
         </div>
       </div>

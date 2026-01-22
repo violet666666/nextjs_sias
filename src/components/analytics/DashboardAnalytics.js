@@ -56,10 +56,10 @@ const DashboardAnalytics = ({ userRole }) => {
 
   const renderOverviewCards = () => {
     const cards = [
-      { title: 'Total Users', value: analytics.totalUsers, icon: '👥', color: 'bg-blue-500' },
-      { title: 'Total Classes', value: analytics.totalClasses, icon: '🏫', color: 'bg-green-500' },
-      { title: 'Total Assignments', value: analytics.totalAssignments, icon: '📝', color: 'bg-yellow-500' },
-      { title: 'Total Attendance', value: analytics.totalAttendance, icon: '📊', color: 'bg-purple-500' },
+      { title: 'Total Pengguna', value: analytics.totalUsers, icon: '👥', color: 'bg-blue-500' },
+      { title: 'Total Kelas', value: analytics.totalClasses, icon: '🏫', color: 'bg-green-500' },
+      { title: 'Total Tugas', value: analytics.totalAssignments, icon: '📝', color: 'bg-yellow-500' },
+      { title: 'Total Kehadiran', value: analytics.totalAttendance, icon: '📊', color: 'bg-purple-500' },
     ];
 
     return (
@@ -92,7 +92,7 @@ const DashboardAnalytics = ({ userRole }) => {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Users by Role
+          Pengguna Berdasarkan Peran
         </h3>
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
@@ -123,7 +123,7 @@ const DashboardAnalytics = ({ userRole }) => {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Monthly Growth
+          Pertumbuhan Bulanan
         </h3>
         <ResponsiveContainer width="100%" height={300}>
           <AreaChart data={analytics.monthlyGrowth}>
@@ -147,7 +147,7 @@ const DashboardAnalytics = ({ userRole }) => {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Class Performance
+          Kinerja Kelas
         </h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={analytics.classPerformance}>
@@ -174,7 +174,7 @@ const DashboardAnalytics = ({ userRole }) => {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Attendance Statistics
+          Statistik Kehadiran
         </h3>
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={data}>
@@ -195,7 +195,7 @@ const DashboardAnalytics = ({ userRole }) => {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 mb-6">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-          Recent Activity
+          Aktivitas Terbaru
         </h3>
         <div className="space-y-3">
           {analytics.recentActivity.slice(0, 10).map((activity, index) => (
@@ -332,17 +332,17 @@ const DashboardAnalytics = ({ userRole }) => {
       {/* Period Selector */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          Dashboard Analytics
+          Analitik Dashboard
         </h2>
         <select
           value={selectedPeriod}
           onChange={(e) => setSelectedPeriod(e.target.value)}
           className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
         >
-          <option value="week">Last Week</option>
-          <option value="month">Last Month</option>
-          <option value="quarter">Last Quarter</option>
-          <option value="year">Last Year</option>
+          <option value="week">Minggu Ini</option>
+          <option value="month">Bulan Ini</option>
+          <option value="quarter">Kuartal Ini</option>
+          <option value="year">Tahun Ini</option>
         </select>
       </div>
 
