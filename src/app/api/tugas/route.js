@@ -83,38 +83,52 @@ export async function POST(request) {
     }
     const kelas_id = mapel.kelas_id;
 
-    // Perbaikan: guru_id diisi otomatis dari user login
+    // Perbaikan: guru_id diisi otomatis dari user login dengan fallback check
+    const userId = currentUser.id || currentUser._id;
     const tugasData = { kelas_id, mapel_id, judul, deskripsi, tanggal_deadline };
-    if (currentUser.role === 'guru') {
-      tugasData.guru_id = currentUser.id;
-    }
-    // For admin: use provided guru_id or fallback to admin's own ID (required field)
-    if (currentUser.role === 'admin') {
-      tugasData.guru_id = body.guru_id || currentUser.id;
-    }
-    const tugas = await Tugas.create(tugasData);
-    // Audit log
-    await logCRUDAction(currentUser.id, 'CREATE_TUGAS', 'TUGAS', tugas._id, { kelas_id, mapel_id, judul });
 
-    // Kirim notifikasi ke semua siswa di kelas dan orangtua mereka
-    await NotificationService.createNotificationForClassAndParents(
-      kelas_id,
-      {
-        title: 'Tugas Baru',
-        text: `Tugas baru "${judul}" telah ditambahkan untuk kelas Anda.`,
-        type: 'assignment',
-        link: `/cpanel/tasks`
-      },
-      {
-        title: 'Tugas Baru Anak Anda',
-        text: `Anak Anda mendapat tugas baru "${judul}" dari guru.`,
-        type: 'assignment',
-        link: `/cpanel/children`
-      }
-    );
+    if (currentUser.role === 'guru') {
+      tugasData.guru_id = userId;
+    }
+    // For admin: use provided guru_id or fallback to admin's own ID
+    if (currentUser.role === 'admin') {
+      tugasData.guru_id = body.guru_id || userId;
+    }
+
+    if (!tugasData.guru_id) {
+      return NextResponse.json({ error: 'Gagal mengidentifikasi ID Guru pembuat tugas.' }, { status: 400 });
+    }
+
+    const tugas = await Tugas.create(tugasData);
+
+    // Audit log
+    await logCRUDAction(userId, 'CREATE_TUGAS', 'TUGAS', tugas._id, { kelas_id, mapel_id, judul });
+
+    // Kirim notifikasi ke semua siswa di kelas dan orangtua mereka (Safe execution)
+    try {
+      await NotificationService.createNotificationForClassAndParents(
+        kelas_id,
+        {
+          title: 'Tugas Baru',
+          text: `Tugas baru "${judul}" telah ditambahkan untuk kelas Anda.`,
+          type: 'assignment',
+          link: `/cpanel/tasks`
+        },
+        {
+          title: 'Tugas Baru Anak Anda',
+          text: `Anak Anda mendapat tugas baru "${judul}" dari guru.`,
+          type: 'assignment',
+          link: `/cpanel/children` // Perbaikan link menjadi lebih general jika id anak spesifik tidak ada
+        }
+      );
+    } catch (notifError) {
+      console.error("Failed to send task notifications:", notifError);
+      // Do not fail the request if notifications fail
+    }
 
     return NextResponse.json(tugas, { status: 201 });
   } catch (error) {
+    console.error("Error creating tugas:", error); // Added detailed logging
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 } 
